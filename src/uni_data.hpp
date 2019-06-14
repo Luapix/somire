@@ -6,9 +6,8 @@
 
 typedef std::uint32_t uni_cp;
 
-#define DEFINE_PROP(prop, fun_name) \
-	extern const std::size_t UNI_##prop##_RANGES; \
-	extern const uni_cp UNI_##prop[]; \
+#define DECLARE_PROP(fun_name) bool fun_name(uni_cp cp);
+#define DEFINE_PROP(fun_name, prop) \
 	bool fun_name(uni_cp cp) { \
 		for(std::size_t i = 0; i < UNI_##prop##_RANGES; i++) { \
 			if(UNI_##prop[2*i] <= cp && cp <= UNI_##prop[2*i+1]) \
@@ -17,8 +16,8 @@ typedef std::uint32_t uni_cp;
 		return false; \
 	}
 
-DEFINE_PROP(SPACE, is_space)
-DEFINE_PROP(ID_START, is_id_start)
-DEFINE_PROP(ID_CONTINUE, is_id_continue)
+DECLARE_PROP(is_space)
+DECLARE_PROP(is_id_start)
+DECLARE_PROP(is_id_continue)
 
 #endif

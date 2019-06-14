@@ -70,16 +70,19 @@ def flatten(prop):
 header = """\
 #include <cstdint>
 #include <cstddef>
+
+#include "uni_data.hpp"
 """
 
-def write_prop(f, name, prop):
+def write_prop(f, name, fun_name, prop):
 	f.write(f"\nstd::size_t UNI_{name}_RANGES = {len(prop)};\n")
 	f.write(f"std::uint32_t UNI_{name}[] = {{\n\t")
 	f.write(",".join(map(str, flatten(prop))))
 	f.write("\n};\n")
+	f.write(f"DEFINE_PROP({fun_name}, {name})\n")
 
 with open("uni_data.cpp", "w") as f:
 	f.write(header)
-	write_prop(f, "SPACE", space)
-	write_prop(f, "ID_START", id_start)
-	write_prop(f, "ID_CONTINUE", id_continue)
+	write_prop(f, "SPACE", "is_space", space)
+	write_prop(f, "ID_START", "is_id_start", id_start)
+	write_prop(f, "ID_CONTINUE", "is_id_continue", id_continue)

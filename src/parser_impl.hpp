@@ -16,7 +16,7 @@ std::unique_ptr<Node> Parser<C>::lexNewline() {
 			curLine++;
 			newIndent.clear();
 		} else {
-			utf8::append(curChar, std::back_inserter(newIndent));
+			appendCP(newIndent, curChar);
 		}
 		next();
 	}
@@ -36,7 +36,13 @@ std::unique_ptr<Node> Parser<C>::lexNewline() {
 
 template <typename C>
 std::unique_ptr<Node> Parser<C>::lexId() {
-	return std::unique_ptr<Node>(new NodeId(""));
+	std::string val = strFromCP(curChar);
+	next();
+	while(is_id_continue(curChar)) {
+		appendCP(val, curChar);
+		next();
+	}
+	return std::unique_ptr<Node>(new NodeId(val));
 }
 
 template <typename C>

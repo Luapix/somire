@@ -6,12 +6,13 @@
 #include <fstream>
 #include <string>
 #include <exception>
-#include <iterator>
 #include <memory>
 
 #include "utf8.h"
+
 #include "ast.hpp"
 #include "uni_data.hpp"
+#include "uni_util.hpp"
 
 #define UNI_EOI UINT32_MAX
 
