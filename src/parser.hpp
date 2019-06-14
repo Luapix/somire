@@ -21,9 +21,8 @@ class Parser {
 public:
 	Parser(C start, C end);
 	
-	std::unique_ptr<Node> lexNewline();
-	std::unique_ptr<Node> lexId();
-
+	std::unique_ptr<Node> lexProgram();
+	
 private:
 	C curByte;
 	C end;
@@ -35,6 +34,10 @@ private:
 	void error(std::string cause);
 	
 	void next();
+	void skipSpace(bool skipSpace = false);
+	
+	std::unique_ptr<Node> lexNewline();
+	std::unique_ptr<Node> lexId();
 };
 
 Parser<std::istreambuf_iterator<char>> newFileParser(std::ifstream& fs);

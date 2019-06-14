@@ -12,10 +12,7 @@ int main(int argc, char const *argv[]) {
 	std::ifstream fs(argv[1]);
 	try {
 		auto parser = newFileParser(fs);
-		std::cout << parser.lexNewline()->toString() << std::endl;
-		std::cout << parser.lexId()->toString() << std::endl;
-		std::cout << parser.lexNewline()->toString() << std::endl;
-		std::cout << parser.lexId()->toString() << std::endl;
+		std::cout << parser.lexProgram()->toString() << std::endl;
 	} catch(ParseError& e) {
 		std::cout << e.what() << std::endl;
 		return 1;

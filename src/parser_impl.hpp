@@ -8,6 +8,41 @@ Parser<C>::Parser(C start, C end)
 	next();
 }
 
+
+template <typename C>
+std::unique_ptr<Node> Parser<C>::lexProgram() {
+	lexNewline();
+	// TODO
+	return lexId();
+}
+
+template <typename C>
+void Parser<C>::error(std::string cause) {
+	throw ParseError("At line " + std::to_string(curLine) + ": " + cause);
+}
+
+template <typename C>
+void Parser<C>::next() {
+	if(curByte == end) {
+		curChar = UNI_EOI;
+	} else {
+		curChar = utf8::next(curByte, end);
+	}
+}
+
+template <typename C>
+void Parser<C>::skipSpace(bool allowNL) {
+	while(is_space(curChar)) {
+		if(curChar == '\n') {
+			if(!allowNL) return;
+			lexNewline();
+			return;
+		} else {
+			next();
+		}
+	}
+}
+
 template <typename C>
 std::unique_ptr<Node> Parser<C>::lexNewline() {
 	std::string newIndent;
@@ -43,20 +78,6 @@ std::unique_ptr<Node> Parser<C>::lexId() {
 		next();
 	}
 	return std::unique_ptr<Node>(new NodeId(val));
-}
-
-template <typename C>
-void Parser<C>::error(std::string cause) {
-	throw ParseError("At line " + std::to_string(curLine) + ": " + cause);
-}
-
-template <typename C>
-void Parser<C>::next() {
-	if(curByte == end) {
-		curChar = UNI_EOI;
-	} else {
-		curChar = utf8::next(curByte, end);
-	}
 }
 
 
