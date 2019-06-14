@@ -7,7 +7,7 @@ OBJ    := $(addprefix build/, $(addsuffix .o, $(FILES)))
 run: build/parser.exe input.txt
 	build/parser.exe input.txt
 
-$(OBJ): build/%.o : src/%.cpp
+$(OBJ): build/%.o : src/%.cpp src/*.hpp
 	g++ $(CFLAGS) -c $< -o $@
 
 build/parser.exe: $(OBJ)

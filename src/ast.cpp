@@ -1,7 +1,7 @@
 #include "ast.hpp"
 
 ParseError::ParseError(const std::string& what)
-	: runtime_error(what) { }
+	: runtime_error("Parse error: " + what) { }
 
 
 Node::Node(NodeType type) : type(type) { }

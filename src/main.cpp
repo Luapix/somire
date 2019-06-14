@@ -12,7 +12,7 @@ int main(int argc, char const *argv[]) {
 	std::ifstream fs(argv[1]);
 	try {
 		auto parser = newFileParser(fs);
-		parser.printAll();
+		std::cout << parser.lexNewline()->toString() << std::endl;
 	} catch(ParseError& e) {
 		std::cout << e.what() << std::endl;
 		return 1;

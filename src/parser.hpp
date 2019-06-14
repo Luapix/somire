@@ -4,7 +4,10 @@
 #include <cstdint>
 #include <iostream>
 #include <fstream>
+#include <string>
 #include <exception>
+#include <iterator>
+#include <memory>
 
 #include "utf8.h"
 #include "ast.hpp"
@@ -17,12 +20,18 @@ class Parser {
 public:
 	Parser(C start, C end);
 	
-	void printAll();
-	
+	std::unique_ptr<Node> lexNewline();
+	std::unique_ptr<Node> lexId();
+
 private:
 	C curByte;
 	C end;
 	uni_cp curChar;
+	
+	int curLine;
+	std::string curIndent;
+	
+	void error(std::string cause);
 	
 	void next();
 };
