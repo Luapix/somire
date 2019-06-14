@@ -11,14 +11,9 @@
 
 #define UNI_EOI UINT32_MAX
 
-class ParseError : public std::exception {
+class ParseError : public std::runtime_error {
 public:
-	ParseError(std::string reason);
-	
-	const char* what() const noexcept;
-
-private:
-	std::string reason;
+	ParseError(const std::string& what);
 };
 
 template <typename C>

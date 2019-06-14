@@ -1,11 +1,8 @@
 #ifndef PARSER_IMPL_HPP
 #define PARSER_IMPL_HPP
 
-ParseError::ParseError(std::string reason) : reason(reason) { }
-
-const char* ParseError::what() const noexcept {
-	return ("Parse error: " + reason + "\n").c_str();
-}
+ParseError::ParseError(const std::string& what)
+	: runtime_error(what) { }
 
 template <typename C>
 Parser<C>::Parser(C start, C end) : curByte(start), end(end) {
