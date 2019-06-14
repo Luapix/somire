@@ -1,8 +1,6 @@
 #ifndef PARSER_IMPL_HPP
 #define PARSER_IMPL_HPP
 
-ParseError::ParseError(const std::string& what)
-	: runtime_error(what) { }
 
 template <typename C>
 Parser<C>::Parser(C start, C end) : curByte(start), end(end) {
@@ -27,6 +25,7 @@ void Parser<C>::printAll() {
 		next();
 	}
 }
+
 
 Parser<std::istreambuf_iterator<char>> newFileParser(std::ifstream& fs) {
 	if(!fs.is_open()) throw ParseError("unable to open file");
