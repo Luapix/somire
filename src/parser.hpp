@@ -1,12 +1,17 @@
 #ifndef PARSER_HPP
 #define PARSER_HPP
 
-#include <cstdint>
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <cstdint>
+#include <climits>
 #include <exception>
+#include <stdexcept>
+#include <cassert>
 #include <memory>
+
+#include <iostream>
 
 #include "utf8.h"
 
@@ -27,6 +32,7 @@ private:
 	C curByte;
 	C end;
 	uni_cp curChar;
+	uni_cp peekChar;
 	
 	int curLine;
 	std::string curIndent;
@@ -34,10 +40,14 @@ private:
 	void error(std::string cause);
 	
 	void next();
+	uni_cp peek();
 	void skipSpace(bool skipSpace = false);
 	
 	std::unique_ptr<Node> lexNewline();
+	
 	std::unique_ptr<Node> lexId();
+	std::unique_ptr<Node> lexNumber();
+	std::unique_ptr<Node> lexExpr();
 };
 
 Parser<std::istreambuf_iterator<char>> newFileParser(std::ifstream& fs);

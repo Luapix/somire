@@ -1,4 +1,5 @@
 
+CC     := g++
 CFLAGS := -std=c++11 -Wall -Wextra -pedantic -Ic:/lib/utf8-cpp-2.3.4/src
 
 FILES  := main uni_data uni_util ast
@@ -8,10 +9,10 @@ run: build/parser.exe input.txt
 	build/parser.exe input.txt
 
 $(OBJ): build/%.o : src/%.cpp src/*.hpp
-	g++ $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 build/parser.exe: $(OBJ)
-	g++ build/*.o -o build/parser.exe
+	$(CC) build/*.o -o build/parser.exe
 
 src/uni_data.cpp: tools/gen_uni_data.py tools/ppucd.txt
 	cd tools; python gen_uni_data.py

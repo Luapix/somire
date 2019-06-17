@@ -9,3 +9,7 @@ std::string strFromCP(uni_cp cp) {
 	appendCP(s, cp);
 	return s;
 }
+
+bool isDigit(uni_cp cp) {
+	return '0' <= cp && cp <= '9';
+}

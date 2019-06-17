@@ -6,6 +6,7 @@ template <typename C>
 Parser<C>::Parser(C start, C end)
 	: curByte(start), end(end), curLine(1), curIndent() {
 	next();
+	next();
 }
 
 
@@ -13,20 +14,21 @@ template <typename C>
 std::unique_ptr<Node> Parser<C>::lexProgram() {
 	lexNewline();
 	// TODO
-	return lexId();
+	return lexExpr();
 }
 
 template <typename C>
-void Parser<C>::error(std::string cause) {
+[[noreturn]] void Parser<C>::error(std::string cause) {
 	throw ParseError("At line " + std::to_string(curLine) + ": " + cause);
 }
 
 template <typename C>
 void Parser<C>::next() {
+	curChar = peekChar;
 	if(curByte == end) {
-		curChar = UNI_EOI;
+		peekChar = UNI_EOI;
 	} else {
-		curChar = utf8::next(curByte, end);
+		peekChar = utf8::next(curByte, end);
 	}
 }
 
@@ -80,9 +82,72 @@ std::unique_ptr<Node> Parser<C>::lexId() {
 	return std::unique_ptr<Node>(new NodeId(val));
 }
 
+#if INT_MAX != INT32_MAX
+	#error Can''t be bothered to deal with 16-bit ints
+#endif
+template <typename C>
+std::unique_ptr<Node> Parser<C>::lexNumber() {
+	std::string s;
+	int base = 10;
+	bool isReal = false;
+	if(curChar == '0') {
+		uni_cp b = peekChar;
+		if(b == 'x' || b == 'o' || b == 'b') {
+			next();
+			if(!isDigit(peekChar))
+				return std::unique_ptr<Node>(new NodeInt(0));
+			if(b == 'x') base = 16;
+			else if(b == 'o') base = 8;
+			else if(b == 'b') base = 2;
+			next();
+		}
+	}
+	while(isDigit(curChar)) {
+		appendCP(s, curChar);
+		next();
+		if(curChar == '.' && !isReal && base == 10 && isDigit(peekChar)) {
+			isReal = true;
+			appendCP(s, curChar);
+			next();
+		}
+	}
+	if(isReal) {
+		size_t end;
+		double val;
+		try {
+			val = std::stod(s, &end);
+		} catch(std::out_of_range& ex) {
+			error("Real literal too large");
+		}
+		if(end != s.size())
+			error("Error during real parsing");
+		return std::unique_ptr<Node>(new NodeReal(val));
+	} else {
+		size_t end;
+		int val;
+		try {
+			val = std::stoi(s, &end, base);
+		} catch(std::out_of_range& ex) {
+			error("Integer literal too large");
+		}
+		assert(end == s.size());
+		std::int32_t val2 = static_cast<std::int32_t>(val);
+		return std::unique_ptr<Node>(new NodeInt(val2));
+	}
+}
+template <typename C>
+std::unique_ptr<Node> Parser<C>::lexExpr() {
+	if(curChar >= '0' && curChar <= '9')
+		return lexNumber();
+	else if(is_id_start(curChar))
+		return lexId();
+	else
+		error("Invalid syntax in expression");
+}
+
 
 Parser<std::istreambuf_iterator<char>> newFileParser(std::ifstream& fs) {
-	if(!fs.is_open()) throw ParseError("unable to open file");
+	if(!fs.is_open()) throw ParseError("Unable to open file");
 	std::istreambuf_iterator<char> it(fs);
 	std::istreambuf_iterator<char> end_it;
 	return Parser<std::istreambuf_iterator<char>>(it, end_it);
