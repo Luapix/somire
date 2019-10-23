@@ -119,8 +119,7 @@ std::unique_ptr<Node> Parser<C>::lexNumber() {
 		} catch(std::out_of_range& ex) {
 			error("Real literal too large");
 		}
-		if(end != s.size())
-			error("Error during real parsing");
+		assert(end == s.size());
 		return std::unique_ptr<Node>(new NodeReal(val));
 	} else {
 		size_t end;
