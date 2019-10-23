@@ -31,7 +31,7 @@ std::string NodeInt::toString() {
 	return "<INT " + std::to_string(val) + ">";
 }
 
-NodeReal::NodeReal(double val) : Node(N_INT), val(val) {}
+NodeReal::NodeReal(double val) : Node(N_REAL), val(val) {}
 
 std::string NodeReal::toString() {
 	char buf[50];

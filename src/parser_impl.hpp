@@ -88,24 +88,24 @@ std::unique_ptr<Node> Parser<C>::lexId() {
 template <typename C>
 std::unique_ptr<Node> Parser<C>::lexNumber() {
 	std::string s;
-	int base = 10;
+	unsigned int base = 10;
 	bool isReal = false;
 	if(curChar == '0') {
 		uni_cp b = peekChar;
 		if(b == 'x' || b == 'o' || b == 'b') {
 			next();
-			if(!isDigit(peekChar))
-				return std::unique_ptr<Node>(new NodeInt(0));
 			if(b == 'x') base = 16;
 			else if(b == 'o') base = 8;
 			else if(b == 'b') base = 2;
+			if(!isDigit(peekChar, base))
+				return std::unique_ptr<Node>(new NodeInt(0));
 			next();
 		}
 	}
-	while(isDigit(curChar)) {
+	while(isDigit(curChar, base)) {
 		appendCP(s, curChar);
 		next();
-		if(curChar == '.' && !isReal && base == 10 && isDigit(peekChar)) {
+		if(curChar == '.' && !isReal && base == 10 && isDigit(peekChar, base)) {
 			isReal = true;
 			appendCP(s, curChar);
 			next();
@@ -135,6 +135,7 @@ std::unique_ptr<Node> Parser<C>::lexNumber() {
 		return std::unique_ptr<Node>(new NodeInt(val2));
 	}
 }
+
 template <typename C>
 std::unique_ptr<Node> Parser<C>::lexExpr() {
 	if(curChar >= '0' && curChar <= '9')

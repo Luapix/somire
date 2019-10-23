@@ -1,6 +1,6 @@
 
 CC     := g++
-CFLAGS := -std=c++11 -Wall -Wextra -pedantic -Ic:/lib/utf8-cpp-2.3.4/src
+CFLAGS := -std=c++11 -Wall -Wextra -pedantic -Ic:/lib/utf8-cpp-2.3.4
 
 FILES  := main uni_data uni_util ast
 OBJ    := $(addprefix build/, $(addsuffix .o, $(FILES)))

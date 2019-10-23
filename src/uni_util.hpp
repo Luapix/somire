@@ -11,6 +11,6 @@
 void appendCP(std::string& s, uni_cp cp);
 std::string strFromCP(uni_cp cp);
 
-bool isDigit(uni_cp cp);
+bool isDigit(uni_cp cp, unsigned int base);
 
 #endif

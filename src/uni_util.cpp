@@ -10,6 +10,14 @@ std::string strFromCP(uni_cp cp) {
 	return s;
 }
 
-bool isDigit(uni_cp cp) {
-	return '0' <= cp && cp <= '9';
+bool isDigit(uni_cp cp, unsigned int base) {
+	if(base <= 10) {
+		return '0' <= cp && cp < '0' + base;
+	} else if(base == 16) {
+		return ('0' <= cp && cp <= '9')
+			|| ('a' <= cp && cp <= 'f')
+			|| ('A' <= cp && cp <= 'F');
+	} else {
+		return false;
+	}
 }
