@@ -5,8 +5,7 @@
 template <typename C>
 Parser<C>::Parser(C start, C end)
 	: curByte(start), end(end), curLine(1), curIndent() {
-	next();
-	next();
+	next(); next(); next();
 }
 
 
@@ -25,10 +24,11 @@ template <typename C>
 template <typename C>
 void Parser<C>::next() {
 	curChar = peekChar;
+	peekChar = peekChar2;
 	if(curByte == end) {
-		peekChar = UNI_EOI;
+		peekChar2 = UNI_EOI;
 	} else {
-		peekChar = utf8::next(curByte, end);
+		peekChar2 = utf8::next(curByte, end);
 	}
 }
 
@@ -90,26 +90,38 @@ std::unique_ptr<Node> Parser<C>::lexNumber() {
 	std::string s;
 	unsigned int base = 10;
 	bool isReal = false;
-	if(curChar == '0') {
+	if(curChar == '0') { // check for a base specifier
 		uni_cp b = peekChar;
 		if(b == 'x' || b == 'o' || b == 'b') {
-			next();
 			if(b == 'x') base = 16;
 			else if(b == 'o') base = 8;
 			else if(b == 'b') base = 2;
-			if(!isDigit(peekChar, base))
+			if(!isDigit(peekChar2, base)) { // the literal stops at 0
+				next();
 				return std::unique_ptr<Node>(new NodeInt(0));
-			next();
+			}
+			next(); next(); // skip base specifier
 		}
 	}
 	while(isDigit(curChar, base)) {
-		appendCP(s, curChar);
-		next();
-		if(curChar == '.' && !isReal && base == 10 && isDigit(peekChar, base)) {
+		appendCP(s, curChar); next();
+		if(curChar == '.' && !isReal && s.size() > 0 && base == 10 && isDigit(peekChar, base)) {
 			isReal = true;
 			appendCP(s, curChar);
 			next();
-		}
+		} else if((curChar == 'e' || curChar == 'E') && (isReal || (!isReal && base == 10))) {
+			bool hasSign = (peekChar == '+' || peekChar == '-') && isDigit(peekChar2, 10);
+			bool isExponent = isDigit(peekChar, 10) || hasSign;
+			if(isExponent) {
+				isReal = true;
+				appendCP(s, curChar); next();
+				if(hasSign) { appendCP(s, curChar); next(); }
+				while(isDigit(curChar, 10)) {
+					appendCP(s, curChar); next();
+				}
+			}
+			break;
+		} 
 	}
 	if(isReal) {
 		size_t end;

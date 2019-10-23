@@ -33,6 +33,7 @@ private:
 	C end;
 	uni_cp curChar;
 	uni_cp peekChar;
+	uni_cp peekChar2;
 	
 	int curLine;
 	std::string curIndent;
