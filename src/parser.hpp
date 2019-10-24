@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <cassert>
 #include <memory>
+#include <iterator>
 
 #include <iostream>
 
@@ -48,6 +49,7 @@ private:
 	
 	std::unique_ptr<Node> lexId();
 	std::unique_ptr<Node> lexNumber();
+	std::unique_ptr<Node> lexString();
 	std::unique_ptr<Node> lexExpr();
 };
 

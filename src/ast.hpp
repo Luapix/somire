@@ -6,6 +6,10 @@
 #include <cstdint>
 #include <cstdio>
 #include <cassert>
+#include <sstream>
+#include <iomanip>
+
+#include "uni_util.hpp"
 
 class ParseError : public std::runtime_error {
 public:
@@ -13,7 +17,7 @@ public:
 };
 
 
-enum NodeType { N_NL, N_INDENT, N_DEDENT, N_ID, N_INT, N_REAL };
+enum NodeType { N_NL, N_INDENT, N_DEDENT, N_ID, N_INT, N_REAL, N_STR };
 
 class Node {
 public:
@@ -50,6 +54,15 @@ public:
 	std::string toString() override;
 	
 	const double val;
+};
+
+class NodeString : public Node {
+public:
+	NodeString(std::string val);
+	
+	std::string toString() override;
+	
+	const std::string val;
 };
 
 #endif

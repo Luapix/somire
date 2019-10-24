@@ -16,8 +16,9 @@ typedef std::uint32_t uni_cp;
 		return false; \
 	}
 
-DECLARE_PROP(is_space)
-DECLARE_PROP(is_id_start)
-DECLARE_PROP(is_id_continue)
+DECLARE_PROP(isSpace)
+DECLARE_PROP(isIdStart)
+DECLARE_PROP(isIdContinue)
+DECLARE_PROP(isGraphic)
 
 #endif

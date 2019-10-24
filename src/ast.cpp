@@ -1,5 +1,7 @@
 #include "ast.hpp"
 
+#include "utf8.h"
+
 ParseError::ParseError(const std::string& what)
 	: runtime_error("Parse error: " + what) { }
 
@@ -50,4 +52,35 @@ std::string NodeReal::toString() {
 		buf[res+2] = '\0';
 	}
 	return "<REAL " + std::string(buf) + ">";
+}
+
+NodeString::NodeString(std::string val) : Node(N_STR), val(val) {}
+
+std::string NodeString::toString() {
+	std::string res;
+	auto outIt = std::back_inserter(res);
+	auto inIt = val.begin();
+	auto inEnd = val.end();
+	while(inIt != inEnd) {
+		uni_cp cp = utf8::next(inIt, inEnd);
+		switch(cp) {
+		case '\n': res += "\\n"; break;
+		case '\r': res += "\\r"; break;
+		case '\t': res += "\\t"; break;
+		case '\\':
+		case '\'':
+			res += "\\" + strFromCP(cp);
+			break;
+		default:
+			if(isGraphic(cp)) {
+				utf8::append(cp, outIt);
+			} else {
+				std::stringstream code;
+				code << "\\" << (cp <= 0xffff ? "u" : "U")
+					<< std::setfill('0') << std::setw(cp <= 0xffff ? 4 : 6) << std::hex << cp;
+				res += code.str();
+			}
+		}
+	}
+	return "<STR '" + res + "'>";
 }

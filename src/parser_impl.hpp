@@ -34,7 +34,7 @@ void Parser<C>::next() {
 
 template <typename C>
 void Parser<C>::skipSpace(bool allowNL) {
-	while(is_space(curChar)) {
+	while(isSpace(curChar)) {
 		if(curChar == '\n') {
 			if(!allowNL) return;
 			lexNewline();
@@ -48,7 +48,7 @@ void Parser<C>::skipSpace(bool allowNL) {
 template <typename C>
 std::unique_ptr<Node> Parser<C>::lexNewline() {
 	std::string newIndent;
-	while(is_space(curChar)) {
+	while(isSpace(curChar)) {
 		if(curChar == '\n') {
 			curLine++;
 			newIndent.clear();
@@ -75,7 +75,7 @@ template <typename C>
 std::unique_ptr<Node> Parser<C>::lexId() {
 	std::string val = strFromCP(curChar);
 	next();
-	while(is_id_continue(curChar)) {
+	while(isIdContinue(curChar)) {
 		appendCP(val, curChar);
 		next();
 	}
@@ -148,11 +148,65 @@ std::unique_ptr<Node> Parser<C>::lexNumber() {
 }
 
 template <typename C>
+std::unique_ptr<Node> Parser<C>::lexString() {
+	uni_cp delimiter = curChar;
+	next();
+	std::string val;
+	auto outIt = std::back_inserter(val);
+	bool escaping = false;
+	while(!(!escaping && curChar == delimiter)) {
+		if(escaping) {
+			if(curChar == delimiter || curChar == '\\') {
+				utf8::append(curChar, outIt);
+			} else {
+				uni_cp cp = 0;
+				if(curChar == 'u' || curChar == 'U') {
+					bool isBMP = curChar == 'u';
+					for(int i = 1; i <= (isBMP ? 4 : 6); ++i) {
+						cp <<= 4;
+						if('0' <= peekChar && peekChar <= '9') {
+							cp += peekChar - '0';
+						} else if('a' <= peekChar && peekChar <= 'f') {
+							cp += 10 + (peekChar - 'a');
+						} else if('A' <= peekChar && peekChar <= 'F') {
+							cp += 10 + (peekChar - 'A');
+						} else {
+							error("Non-hex digit found in Unicode escape sequence: " + strFromCP(peekChar));
+						}
+						next();
+					}
+				} else {
+					switch(curChar) {
+					case 'n': cp = '\n'; break;
+					case 'r': cp = '\r'; break;
+					case 't': cp = '\t'; break;
+					default:
+						error("Unknown escape sequence in string: \\" + strFromCP(curChar));
+					}
+				}
+				utf8::append(cp, outIt);
+			}
+			escaping = false;
+		} else {
+			if(curChar == '\\') {
+				escaping = true;
+			} else {
+				utf8::append(curChar, outIt);
+			}
+		}
+		next();
+	}
+	return std::unique_ptr<Node>(new NodeString(val));
+}
+
+template <typename C>
 std::unique_ptr<Node> Parser<C>::lexExpr() {
 	if(curChar >= '0' && curChar <= '9')
 		return lexNumber();
-	else if(is_id_start(curChar))
+	else if(isIdStart(curChar))
 		return lexId();
+	else if(curChar == '\'')
+		return lexString();
 	else
 		error("Invalid syntax in expression");
 }
