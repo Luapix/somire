@@ -12,6 +12,9 @@ clean:
 	rm -f build/*
 	rm -f parser.exe
 
+debug: CFLAGS := -g $(CFLAGS)
+debug: parser.exe
+
 $(OBJ_FILES): build/%.o : src/%.cpp src/*.hpp
 	$(CC) $(CFLAGS) -c $< -o $@
 

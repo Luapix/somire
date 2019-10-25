@@ -12,7 +12,11 @@ int main(int argc, char const *argv[]) {
 	std::ifstream fs(argv[1]);
 	try {
 		auto parser = newFileParser(fs);
-		std::cout << parser.lexProgram()->toString() << std::endl;
+		std::unique_ptr<Node> node;
+		do {
+			node.reset(parser.lexToken().release());
+			std::cout << node->toString() << std::endl;
+		} while(node->type != N_EOI);
 	} catch(ParseError& e) {
 		std::cout << e.what() << std::endl;
 		return 1;

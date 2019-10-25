@@ -5,37 +5,45 @@
 ParseError::ParseError(const std::string& what)
 	: runtime_error("Parse error: " + what) { }
 
-
-Node::Node(NodeType type) : type(type) { }
-
-std::string Node::toString() {
+std::string nodeTypeDesc(NodeType type) {
 	switch(type) {
-	case N_NL:
-		return "<NL>";
-	case N_INDENT:
-		return "<INDENT>";
-	case N_DEDENT:
-		return "<DEDENT>";
+	case N_NL: return "newline";
+	case N_INDENT: return "indent";
+	case N_DEDENT: return "dedent";
+	case N_EOI: return "EOI";
+	case N_ID: return "identifier";
+	case N_INT: return "int";
+	case N_REAL: return "real";
+	case N_STR: return "string";
+	case N_SYM: return "symbol";
 	default:
 		throw std::runtime_error("Unimplemented token type");
 	}
 }
 
+Node::Node(NodeType type) : type(type) { }
+
+std::string Node::toString() {
+	return "<" + nodeTypeDesc(type) + getDataDesc() + ">";
+}
+
+std::string Node::getDataDesc() { return ""; }
+
 NodeId::NodeId(std::string val) : Node(N_ID), val(val) {}
 
-std::string NodeId::toString() {
-	return "<ID " + val + ">";
+std::string NodeId::getDataDesc() {
+	return " " + val;
 }
 
 NodeInt::NodeInt(std::int32_t val) : Node(N_INT), val(val) {}
 
-std::string NodeInt::toString() {
-	return "<INT " + std::to_string(val) + ">";
+std::string NodeInt::getDataDesc() {
+	return " " + std::to_string(val);
 }
 
 NodeReal::NodeReal(double val) : Node(N_REAL), val(val) {}
 
-std::string NodeReal::toString() {
+std::string NodeReal::getDataDesc() {
 	char buf[50];
 	int res = std::snprintf(buf, 48, "%.16g", val);
 	assert(res >= 0 && res < 48);
@@ -51,12 +59,12 @@ std::string NodeReal::toString() {
 		buf[res+1] = '0';
 		buf[res+2] = '\0';
 	}
-	return "<REAL " + std::string(buf) + ">";
+	return " " + std::string(buf);
 }
 
 NodeString::NodeString(std::string val) : Node(N_STR), val(val) {}
 
-std::string NodeString::toString() {
+std::string NodeString::getDataDesc() {
 	std::string res;
 	auto outIt = std::back_inserter(res);
 	auto inIt = val.begin();
@@ -82,5 +90,9 @@ std::string NodeString::toString() {
 			}
 		}
 	}
-	return "<STR '" + res + "'>";
+	return " '" + res + "'";
 }
+
+NodeSymbol::NodeSymbol(std::string val) : Node(N_SYM), val(val) {}
+
+std::string NodeSymbol::getDataDesc() { return " " + val; }

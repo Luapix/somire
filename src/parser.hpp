@@ -11,8 +11,7 @@
 #include <cassert>
 #include <memory>
 #include <iterator>
-
-#include <iostream>
+#include <unordered_set>
 
 #include "utf8.h"
 
@@ -27,11 +26,12 @@ class Parser {
 public:
 	Parser(C start, C end);
 	
-	std::unique_ptr<Node> lexProgram();
+	std::unique_ptr<Node> lexToken();
 	
 private:
 	C curByte;
 	C end;
+	
 	uni_cp curChar;
 	uni_cp peekChar;
 	uni_cp peekChar2;
@@ -40,17 +40,16 @@ private:
 	std::string curIndent;
 	
 	void error(std::string cause);
-	
 	void next();
-	uni_cp peek();
 	void skipSpace(bool skipSpace = false);
 	
 	std::unique_ptr<Node> lexNewline();
-	
 	std::unique_ptr<Node> lexId();
 	std::unique_ptr<Node> lexNumber();
 	std::unique_ptr<Node> lexString();
-	std::unique_ptr<Node> lexExpr();
+	std::unique_ptr<Node> lexSymbol();
+	
+	std::unique_ptr<Node> expectToken(NodeType type);
 };
 
 Parser<std::istreambuf_iterator<char>> newFileParser(std::ifstream& fs);

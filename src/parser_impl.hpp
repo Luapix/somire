@@ -4,16 +4,8 @@
 
 template <typename C>
 Parser<C>::Parser(C start, C end)
-	: curByte(start), end(end), curLine(1), curIndent() {
+	: curByte(start), end(end), curLine(0), curIndent() {
 	next(); next(); next();
-}
-
-
-template <typename C>
-std::unique_ptr<Node> Parser<C>::lexProgram() {
-	lexNewline();
-	// TODO
-	return lexExpr();
 }
 
 template <typename C>
@@ -155,6 +147,9 @@ std::unique_ptr<Node> Parser<C>::lexString() {
 	auto outIt = std::back_inserter(val);
 	bool escaping = false;
 	while(!(!escaping && curChar == delimiter)) {
+		if(curChar == UNI_EOI) {
+			error("Unfinished string literal");
+		}
 		if(escaping) {
 			if(curChar == delimiter || curChar == '\\') {
 				utf8::append(curChar, outIt);
@@ -196,19 +191,65 @@ std::unique_ptr<Node> Parser<C>::lexString() {
 		}
 		next();
 	}
+	next(); // skip end delimiter
 	return std::unique_ptr<Node>(new NodeString(val));
 }
 
+std::unordered_set<uni_cp> symbolChars = {
+	'=', ',', '(', ')',
+	'+', '-', '*', '/', '^',
+};
+
+std::unordered_set<std::string> symbolStrings = {
+	"=="
+};
+
 template <typename C>
-std::unique_ptr<Node> Parser<C>::lexExpr() {
-	if(curChar >= '0' && curChar <= '9')
-		return lexNumber();
+std::unique_ptr<Node> Parser<C>::lexSymbol() {
+	if(peekChar != UNI_EOI && symbolStrings.find(strFromCP(curChar) + strFromCP(peekChar)) != symbolStrings.end()) {
+		std::string sym = strFromCP(curChar) + strFromCP(peekChar);
+		next(); next();
+		return std::unique_ptr<Node>(new NodeSymbol(sym));
+	} else if(symbolChars.find(curChar) != symbolChars.end()) {
+		std::string sym = strFromCP(curChar);
+		next();
+		return std::unique_ptr<Node>(new NodeSymbol(sym));
+	} else {
+		error("Unexpected character");
+	}
+}
+
+template <typename C>
+std::unique_ptr<Node> Parser<C>::lexToken() {
+	std::unique_ptr<Node> token;
+	
+	if(curLine == 0) {
+		curLine++;
+		token = lexNewline();
+	} else if(curChar >= '0' && curChar <= '9')
+		token = lexNumber();
 	else if(isIdStart(curChar))
-		return lexId();
+		token = lexId();
 	else if(curChar == '\'')
-		return lexString();
+		token = lexString();
+	else if(curChar == '\n')
+		token = lexNewline();
+	else if(curChar == UNI_EOI)
+		token = std::unique_ptr<Node>(new Node(N_EOI));
 	else
-		error("Invalid syntax in expression");
+		token = lexSymbol();
+	
+	skipSpace();
+	return token;
+}
+
+template <typename C>
+std::unique_ptr<Node> Parser<C>::expectToken(NodeType type) {
+	std::unique_ptr<Node> node = lexToken();
+	if(node->type != type) {
+		error("Expected " + nodeTypeDesc(type) + ", got " + nodeTypeDesc(node->type));
+	}
+	return node;
 }
 
 
