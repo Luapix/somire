@@ -278,7 +278,6 @@ std::unordered_set<std::string> infixOperators = { "+", "-", "*", "/", "^", "and
 std::unordered_set<std::string> rightAssociativeOperators = { "^" };
 
 std::unordered_map<std::string, int> operatorPrecedence = {
-	{"(", 0}, {",", 0}, {")", 0},
 	{"and", 2}, {"or", 2},
 	{"not", 4},
 	{"+", 6}, {"-", 6},
@@ -307,6 +306,19 @@ std::unique_ptr<Node> Parser<C>::parseExpr(int prec) {
 		if(prefixOperators.find(symbol->val) != prefixOperators.end()) {
 			int prec2 = operatorPrecedence[symbol->val];
 			exp = std::unique_ptr<Node>(new NodeUnitary(symbol->val, parseExpr(prec2)));
+		} else if(symbol->val == "(") {
+			exp = parseExpr(0);
+			bool closed = true;
+			if(curToken->type != N_SYM) {
+				closed = false;
+			} else {
+				std::unique_ptr<NodeSymbol> symbol(static_cast<NodeSymbol*>(nextToken().release()));
+				if(symbol->val != ")") {
+					closed = false;
+				}
+			}
+			if(not closed)
+				error("Expected ')' symbol, got " + curToken->toString());
 		} else {
 			error("Unexpected symbol at start of expression: " + symbol->val);
 		}
