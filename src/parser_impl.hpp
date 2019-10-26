@@ -274,8 +274,10 @@ void Parser<C>::discardToken(NodeType type) {
 
 std::unordered_set<NodeType> terminals = { N_ID, N_INT, N_REAL, N_STR };
 std::unordered_set<std::string> prefixOperators = { "+", "-", "not" };
+std::unordered_set<std::string> infixOperators = { "+", "-", "*", "/", "^", "and", "or" };
+std::unordered_set<std::string> rightAssociativeOperators = { "^" };
 
-std::unordered_map<std::string, int> operatorPriority = {
+std::unordered_map<std::string, int> operatorPrecedence = {
 	{"(", 0}, {",", 0}, {")", 0},
 	{"and", 2}, {"or", 2},
 	{"not", 4},
@@ -285,14 +287,26 @@ std::unordered_map<std::string, int> operatorPriority = {
 };
 
 template <typename C>
-std::unique_ptr<Node> Parser<C>::parseExpr(int priority) {
-	std::unique_ptr<Node> prefix;
+int Parser<C>::getInfixPrecedence() {
+	if(curToken->type == N_SYM) {
+		std::string sym = static_cast<NodeSymbol*>(curToken.get())->val;
+		if(infixOperators.find(sym) != infixOperators.end()) {
+			return operatorPrecedence[sym];
+		}
+	}
+	return -1; // Not an infix/postfix operator
+}
+
+template <typename C>
+std::unique_ptr<Node> Parser<C>::parseExpr(int prec) {
+	std::unique_ptr<Node> exp;
 	if(terminals.find(curToken->type) != terminals.end()) {
-		prefix = nextToken();
+		exp = nextToken();
 	} else if(curToken->type == N_SYM) {
 		std::unique_ptr<NodeSymbol> symbol(static_cast<NodeSymbol*>(nextToken().release()));
 		if(prefixOperators.find(symbol->val) != prefixOperators.end()) {
-			prefix = std::unique_ptr<Node>(new NodeUnitary(symbol->val, parseExpr(priority)));
+			int prec2 = operatorPrecedence[symbol->val];
+			exp = std::unique_ptr<Node>(new NodeUnitary(symbol->val, parseExpr(prec2)));
 		} else {
 			error("Unexpected symbol at start of expression: " + symbol->val);
 		}
@@ -300,7 +314,19 @@ std::unique_ptr<Node> Parser<C>::parseExpr(int priority) {
 		error("Unexpected token at start of expression: " + curToken->toString());
 	}
 	
-	return prefix;
+	while(getInfixPrecedence() > prec) {
+		std::unique_ptr<NodeSymbol> symbol(static_cast<NodeSymbol*>(nextToken().release()));
+		if(infixOperators.find(symbol->val) != infixOperators.end()) {
+			int prec2 = operatorPrecedence[symbol->val];
+			if(rightAssociativeOperators.find(symbol->val) != rightAssociativeOperators.end())
+				prec2--;
+			exp = std::unique_ptr<Node>(new NodeBinary(symbol->val, std::move(exp), parseExpr(prec2)));
+		} else {
+			error("Unimplemented infix/postfix operator: " + symbol->val);
+		}
+	}
+	
+	return exp;
 }
 
 

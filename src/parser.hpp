@@ -56,7 +56,8 @@ private:
 	std::unique_ptr<Node> nextToken();
 	void discardToken(NodeType type);
 	
-	std::unique_ptr<Node> parseExpr(int priority = 0);
+	int getInfixPrecedence();
+	std::unique_ptr<Node> parseExpr(int prec = 0);
 };
 
 Parser<std::istreambuf_iterator<char>> newFileParser(std::ifstream& fs);

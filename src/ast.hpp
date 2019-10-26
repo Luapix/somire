@@ -22,7 +22,7 @@ enum NodeType {
 	N_NL, N_INDENT, N_DEDENT, N_EOI,
 	N_ID, N_INT, N_REAL, N_STR,
 	N_SYM,
-	N_UNI_OP
+	N_UNI_OP, N_BIN_OP
 };
 
 std::string nodeTypeDesc(NodeType type);
@@ -96,6 +96,17 @@ public:
 	
 	const std::string op;
 	const std::unique_ptr<Node> val;
+	
+protected:
+	std::string getDataDesc() override;
+};
+
+class NodeBinary : public Node {
+public:
+	NodeBinary(std::string op, std::unique_ptr<Node> left, std::unique_ptr<Node> right);
+	
+	const std::string op;
+	const std::unique_ptr<Node> left, right;
 	
 protected:
 	std::string getDataDesc() override;

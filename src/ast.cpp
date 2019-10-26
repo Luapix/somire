@@ -17,6 +17,7 @@ std::string nodeTypeDesc(NodeType type) {
 	case N_STR: return "string";
 	case N_SYM: return "symbol";
 	case N_UNI_OP: return "unitary";
+	case N_BIN_OP: return "binary";
 	default:
 		throw std::runtime_error("Unimplemented token type");
 	}
@@ -102,3 +103,8 @@ NodeUnitary::NodeUnitary(std::string op, std::unique_ptr<Node> val)
 	: Node(N_UNI_OP), op(op), val(std::move(val)) {}
 
 std::string NodeUnitary::getDataDesc() { return " " + op + " " + val->toString(); }
+
+NodeBinary::NodeBinary(std::string op, std::unique_ptr<Node> left, std::unique_ptr<Node> right)
+	: Node(N_BIN_OP), op(op), left(std::move(left)), right(std::move(right)) {}
+
+std::string NodeBinary::getDataDesc() { return " " + op + " " + left->toString() + " " + right->toString(); }
