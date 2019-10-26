@@ -5,7 +5,14 @@
 template <typename C>
 Parser<C>::Parser(C start, C end)
 	: curByte(start), end(end), curLine(0), curIndent() {
-	next(); next(); next();
+	nextChar(); nextChar(); nextChar();
+	nextToken();
+}
+
+template <typename C>
+std::unique_ptr<Node> Parser<C>::testParse() {
+	discardToken(N_NL);
+	return parseExpr();
 }
 
 template <typename C>
@@ -14,7 +21,7 @@ template <typename C>
 }
 
 template <typename C>
-void Parser<C>::next() {
+void Parser<C>::nextChar() {
 	curChar = peekChar;
 	peekChar = peekChar2;
 	if(curByte == end) {
@@ -32,7 +39,7 @@ void Parser<C>::skipSpace(bool allowNL) {
 			lexNewline();
 			return;
 		} else {
-			next();
+			nextChar();
 		}
 	}
 }
@@ -47,7 +54,7 @@ std::unique_ptr<Node> Parser<C>::lexNewline() {
 		} else {
 			appendCP(newIndent, curChar);
 		}
-		next();
+		nextChar();
 	}
 	NodeType type;
 	if(newIndent == curIndent) {
@@ -63,15 +70,23 @@ std::unique_ptr<Node> Parser<C>::lexNewline() {
 	return std::unique_ptr<Node>(new Node(type));
 }
 
+std::unordered_set<std::string> keywords = {
+	"let", "not", "and", "or"
+};
+
 template <typename C>
 std::unique_ptr<Node> Parser<C>::lexId() {
 	std::string val = strFromCP(curChar);
-	next();
+	nextChar();
 	while(isIdContinue(curChar)) {
 		appendCP(val, curChar);
-		next();
+		nextChar();
 	}
-	return std::unique_ptr<Node>(new NodeId(val));
+	if(keywords.find(val) != keywords.end()) {
+		return std::unique_ptr<Node>(new NodeSymbol(val));
+	} else {
+		return std::unique_ptr<Node>(new NodeId(val));
+	}
 }
 
 #if INT_MAX != INT32_MAX
@@ -89,27 +104,27 @@ std::unique_ptr<Node> Parser<C>::lexNumber() {
 			else if(b == 'o') base = 8;
 			else if(b == 'b') base = 2;
 			if(!isDigit(peekChar2, base)) { // the literal stops at 0
-				next();
+				nextChar();
 				return std::unique_ptr<Node>(new NodeInt(0));
 			}
-			next(); next(); // skip base specifier
+			nextChar(); nextChar(); // skip base specifier
 		}
 	}
 	while(isDigit(curChar, base)) {
-		appendCP(s, curChar); next();
+		appendCP(s, curChar); nextChar();
 		if(curChar == '.' && !isReal && s.size() > 0 && base == 10 && isDigit(peekChar, base)) {
 			isReal = true;
 			appendCP(s, curChar);
-			next();
+			nextChar();
 		} else if((curChar == 'e' || curChar == 'E') && (isReal || (!isReal && base == 10))) {
 			bool hasSign = (peekChar == '+' || peekChar == '-') && isDigit(peekChar2, 10);
 			bool isExponent = isDigit(peekChar, 10) || hasSign;
 			if(isExponent) {
 				isReal = true;
-				appendCP(s, curChar); next();
-				if(hasSign) { appendCP(s, curChar); next(); }
+				appendCP(s, curChar); nextChar();
+				if(hasSign) { appendCP(s, curChar); nextChar(); }
 				while(isDigit(curChar, 10)) {
-					appendCP(s, curChar); next();
+					appendCP(s, curChar); nextChar();
 				}
 			}
 			break;
@@ -142,7 +157,7 @@ std::unique_ptr<Node> Parser<C>::lexNumber() {
 template <typename C>
 std::unique_ptr<Node> Parser<C>::lexString() {
 	uni_cp delimiter = curChar;
-	next();
+	nextChar();
 	std::string val;
 	auto outIt = std::back_inserter(val);
 	bool escaping = false;
@@ -168,7 +183,7 @@ std::unique_ptr<Node> Parser<C>::lexString() {
 						} else {
 							error("Non-hex digit found in Unicode escape sequence: " + strFromCP(peekChar));
 						}
-						next();
+						nextChar();
 					}
 				} else {
 					switch(curChar) {
@@ -189,9 +204,9 @@ std::unique_ptr<Node> Parser<C>::lexString() {
 				utf8::append(curChar, outIt);
 			}
 		}
-		next();
+		nextChar();
 	}
-	next(); // skip end delimiter
+	nextChar(); // skip end delimiter
 	return std::unique_ptr<Node>(new NodeString(val));
 }
 
@@ -208,11 +223,11 @@ template <typename C>
 std::unique_ptr<Node> Parser<C>::lexSymbol() {
 	if(peekChar != UNI_EOI && symbolStrings.find(strFromCP(curChar) + strFromCP(peekChar)) != symbolStrings.end()) {
 		std::string sym = strFromCP(curChar) + strFromCP(peekChar);
-		next(); next();
+		nextChar(); nextChar();
 		return std::unique_ptr<Node>(new NodeSymbol(sym));
 	} else if(symbolChars.find(curChar) != symbolChars.end()) {
 		std::string sym = strFromCP(curChar);
-		next();
+		nextChar();
 		return std::unique_ptr<Node>(new NodeSymbol(sym));
 	} else {
 		error("Unexpected character");
@@ -244,12 +259,48 @@ std::unique_ptr<Node> Parser<C>::lexToken() {
 }
 
 template <typename C>
-std::unique_ptr<Node> Parser<C>::expectToken(NodeType type) {
-	std::unique_ptr<Node> node = lexToken();
-	if(node->type != type) {
-		error("Expected " + nodeTypeDesc(type) + ", got " + nodeTypeDesc(node->type));
+std::unique_ptr<Node> Parser<C>::nextToken() {
+	std::unique_ptr<Node> token = lexToken(); // Get new token
+	curToken.swap(token); // Swap with old token
+	return token; // Return old token
+}
+
+template <typename C>
+void Parser<C>::discardToken(NodeType type) {
+	std::unique_ptr<Node> token = nextToken();
+	if(token->type != type)
+		error("Expected " + nodeTypeDesc(type) + ", got " + nodeTypeDesc(token->type));
+}
+
+std::unordered_set<NodeType> terminals = { N_ID, N_INT, N_REAL, N_STR };
+std::unordered_set<std::string> prefixOperators = { "+", "-", "not" };
+
+std::unordered_map<std::string, int> operatorPriority = {
+	{"(", 0}, {",", 0}, {")", 0},
+	{"and", 2}, {"or", 2},
+	{"not", 4},
+	{"+", 6}, {"-", 6},
+	{"*", 8}, {"/", 8},
+	{"^", 10}
+};
+
+template <typename C>
+std::unique_ptr<Node> Parser<C>::parseExpr(int priority) {
+	std::unique_ptr<Node> prefix;
+	if(terminals.find(curToken->type) != terminals.end()) {
+		prefix = nextToken();
+	} else if(curToken->type == N_SYM) {
+		std::unique_ptr<NodeSymbol> symbol(static_cast<NodeSymbol*>(nextToken().release()));
+		if(prefixOperators.find(symbol->val) != prefixOperators.end()) {
+			prefix = std::unique_ptr<Node>(new NodeUnitary(symbol->val, parseExpr(priority)));
+		} else {
+			error("Unexpected symbol at start of expression: " + symbol->val);
+		}
+	} else {
+		error("Unexpected token at start of expression: " + curToken->toString());
 	}
-	return node;
+	
+	return prefix;
 }
 
 

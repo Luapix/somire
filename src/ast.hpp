@@ -8,6 +8,7 @@
 #include <cassert>
 #include <sstream>
 #include <iomanip>
+#include <memory>
 
 #include "uni_util.hpp"
 
@@ -20,7 +21,8 @@ public:
 enum NodeType {
 	N_NL, N_INDENT, N_DEDENT, N_EOI,
 	N_ID, N_INT, N_REAL, N_STR,
-	N_SYM
+	N_SYM,
+	N_UNI_OP
 };
 
 std::string nodeTypeDesc(NodeType type);
@@ -83,6 +85,17 @@ public:
 	NodeSymbol(std::string val);
 	
 	const std::string val;
+	
+protected:
+	std::string getDataDesc() override;
+};
+
+class NodeUnitary : public Node {
+public:
+	NodeUnitary(std::string op, std::unique_ptr<Node> val);
+	
+	const std::string op;
+	const std::unique_ptr<Node> val;
 	
 protected:
 	std::string getDataDesc() override;

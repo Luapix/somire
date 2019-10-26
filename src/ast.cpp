@@ -16,6 +16,7 @@ std::string nodeTypeDesc(NodeType type) {
 	case N_REAL: return "real";
 	case N_STR: return "string";
 	case N_SYM: return "symbol";
+	case N_UNI_OP: return "unitary";
 	default:
 		throw std::runtime_error("Unimplemented token type");
 	}
@@ -96,3 +97,8 @@ std::string NodeString::getDataDesc() {
 NodeSymbol::NodeSymbol(std::string val) : Node(N_SYM), val(val) {}
 
 std::string NodeSymbol::getDataDesc() { return " " + val; }
+
+NodeUnitary::NodeUnitary(std::string op, std::unique_ptr<Node> val)
+	: Node(N_UNI_OP), op(op), val(std::move(val)) {}
+
+std::string NodeUnitary::getDataDesc() { return " " + op + " " + val->toString(); }
