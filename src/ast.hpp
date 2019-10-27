@@ -22,7 +22,8 @@ enum NodeType {
 	N_NL, N_INDENT, N_DEDENT, N_EOI,
 	N_ID, N_INT, N_REAL, N_STR,
 	N_SYM,
-	N_UNI_OP, N_BIN_OP
+	N_UNI_OP, N_BIN_OP,
+	N_LET
 };
 
 std::string nodeTypeDesc(NodeType type);
@@ -107,6 +108,17 @@ public:
 	
 	const std::string op;
 	const std::unique_ptr<Node> left, right;
+	
+protected:
+	std::string getDataDesc() override;
+};
+
+class NodeLet : public Node {
+public:
+	NodeLet(std::string id, std::unique_ptr<Node> exp);
+	
+	const std::string id;
+	const std::unique_ptr<Node> exp;
 	
 protected:
 	std::string getDataDesc() override;

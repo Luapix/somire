@@ -12,7 +12,7 @@ Parser<C>::Parser(C start, C end)
 template <typename C>
 std::unique_ptr<Node> Parser<C>::testParse() {
 	discardToken(N_NL);
-	return parseExpr();
+	return parseStatement();
 }
 
 template <typename C>
@@ -350,6 +350,24 @@ std::unique_ptr<Node> Parser<C>::parseExpr(int prec) {
 	}
 	
 	return exp;
+}
+
+template <typename C>
+std::unique_ptr<Node> Parser<C>::parseStatement() {
+	if(isCurSymbol("let")) {
+		nextToken();
+		std::unique_ptr<Node> idToken = nextToken();
+		if(idToken->type != N_ID)
+			error("Expected identifier after 'let', got " + nodeTypeDesc(idToken->type));
+		std::string id = static_cast<NodeId*>(idToken.get())->val;
+		if(!isCurSymbol("="))
+			error("Expected '=' after 'let' + identifier, got " + curToken->toString());
+		nextToken();
+		std::unique_ptr<Node> expr = parseExpr();
+		return std::unique_ptr<Node>(new NodeLet(id, std::move(expr)));
+	} else {
+		error("Unexpected token at start of statement: " + curToken->toString());
+	}
 }
 
 

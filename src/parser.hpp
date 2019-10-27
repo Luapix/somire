@@ -59,6 +59,7 @@ private:
 	
 	int getInfixPrecedence();
 	std::unique_ptr<Node> parseExpr(int prec = 0);
+	std::unique_ptr<Node> parseStatement();
 };
 
 Parser<std::istreambuf_iterator<char>> newFileParser(std::ifstream& fs);
