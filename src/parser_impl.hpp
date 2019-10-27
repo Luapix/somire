@@ -230,7 +230,7 @@ std::unique_ptr<Node> Parser<C>::lexSymbol() {
 		nextChar();
 		return std::unique_ptr<Node>(new NodeSymbol(sym));
 	} else {
-		error("Unexpected character");
+		error("Unexpected character: " + strFromCP(curChar));
 	}
 }
 
@@ -272,9 +272,16 @@ void Parser<C>::discardToken(NodeType type) {
 		error("Expected " + nodeTypeDesc(type) + ", got " + nodeTypeDesc(token->type));
 }
 
+template <typename C>
+bool Parser<C>::isCurSymbol(std::string sym) {
+	if(curToken->type != N_SYM) return false;
+	NodeSymbol* symToken = static_cast<NodeSymbol*>(curToken.get());
+	return symToken->val == sym;
+}
+
 std::unordered_set<NodeType> terminals = { N_ID, N_INT, N_REAL, N_STR };
 std::unordered_set<std::string> prefixOperators = { "+", "-", "not" };
-std::unordered_set<std::string> infixOperators = { "+", "-", "*", "/", "^", "and", "or" };
+std::unordered_set<std::string> infixOperators = { "+", "-", "*", "/", "^", "and", "or", "(" };
 std::unordered_set<std::string> rightAssociativeOperators = { "^" };
 
 std::unordered_map<std::string, int> operatorPrecedence = {
@@ -282,7 +289,8 @@ std::unordered_map<std::string, int> operatorPrecedence = {
 	{"not", 4},
 	{"+", 6}, {"-", 6},
 	{"*", 8}, {"/", 8},
-	{"^", 10}
+	{"^", 10},
+	{"(", 12}
 };
 
 template <typename C>
@@ -308,17 +316,11 @@ std::unique_ptr<Node> Parser<C>::parseExpr(int prec) {
 			exp = std::unique_ptr<Node>(new NodeUnitary(symbol->val, parseExpr(prec2)));
 		} else if(symbol->val == "(") {
 			exp = parseExpr(0);
-			bool closed = true;
-			if(curToken->type != N_SYM) {
-				closed = false;
+			if(isCurSymbol(")")) {
+				nextToken();
 			} else {
-				std::unique_ptr<NodeSymbol> symbol(static_cast<NodeSymbol*>(nextToken().release()));
-				if(symbol->val != ")") {
-					closed = false;
-				}
-			}
-			if(not closed)
 				error("Expected ')' symbol, got " + curToken->toString());
+			}
 		} else {
 			error("Unexpected symbol at start of expression: " + symbol->val);
 		}
@@ -329,10 +331,19 @@ std::unique_ptr<Node> Parser<C>::parseExpr(int prec) {
 	while(getInfixPrecedence() > prec) {
 		std::unique_ptr<NodeSymbol> symbol(static_cast<NodeSymbol*>(nextToken().release()));
 		if(infixOperators.find(symbol->val) != infixOperators.end()) {
-			int prec2 = operatorPrecedence[symbol->val];
-			if(rightAssociativeOperators.find(symbol->val) != rightAssociativeOperators.end())
-				prec2--;
-			exp = std::unique_ptr<Node>(new NodeBinary(symbol->val, std::move(exp), parseExpr(prec2)));
+			if(symbol->val == "(") {
+				exp = std::unique_ptr<Node>(new NodeBinary("call", std::move(exp), parseExpr(0)));
+				if(isCurSymbol(")")) {
+					nextToken();
+				} else {
+					error("Expected ')' symbol, got " + curToken->toString());
+				}
+			} else {
+				int prec2 = operatorPrecedence[symbol->val];
+				if(rightAssociativeOperators.find(symbol->val) != rightAssociativeOperators.end())
+					prec2--;
+				exp = std::unique_ptr<Node>(new NodeBinary(symbol->val, std::move(exp), parseExpr(prec2)));
+			}
 		} else {
 			error("Unimplemented infix/postfix operator: " + symbol->val);
 		}

@@ -55,6 +55,7 @@ private:
 	
 	std::unique_ptr<Node> nextToken();
 	void discardToken(NodeType type);
+	bool isCurSymbol(std::string sym);
 	
 	int getInfixPrecedence();
 	std::unique_ptr<Node> parseExpr(int prec = 0);
