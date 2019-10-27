@@ -9,6 +9,7 @@
 #include <sstream>
 #include <iomanip>
 #include <memory>
+#include <vector>
 
 #include "uni_util.hpp"
 
@@ -23,7 +24,8 @@ enum NodeType {
 	N_ID, N_INT, N_REAL, N_STR,
 	N_SYM,
 	N_UNI_OP, N_BIN_OP,
-	N_LET
+	N_LET,
+	N_PROG
 };
 
 std::string nodeTypeDesc(NodeType type);
@@ -119,6 +121,16 @@ public:
 	
 	const std::string id;
 	const std::unique_ptr<Node> exp;
+	
+protected:
+	std::string getDataDesc() override;
+};
+
+class NodeProgram : public Node {
+public:
+	NodeProgram(std::vector<std::unique_ptr<Node>> statements);
+	
+	const std::vector<std::unique_ptr<Node>> statements;
 	
 protected:
 	std::string getDataDesc() override;

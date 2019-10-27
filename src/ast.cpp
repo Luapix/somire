@@ -19,6 +19,7 @@ std::string nodeTypeDesc(NodeType type) {
 	case N_UNI_OP: return "unitary";
 	case N_BIN_OP: return "binary";
 	case N_LET: return "let";
+	case N_PROG: return "program";
 	default:
 		throw std::runtime_error("Unimplemented token type");
 	}
@@ -114,3 +115,14 @@ NodeLet::NodeLet(std::string id, std::unique_ptr<Node> exp)
 	: Node(N_LET), id(id), exp(std::move(exp)) {}
 
 std::string NodeLet::getDataDesc() { return " " + id + " = " + exp->toString(); }
+
+NodeProgram::NodeProgram(std::vector<std::unique_ptr<Node>> statements)
+	: Node(N_PROG), statements(std::move(statements)) {}
+
+std::string NodeProgram::getDataDesc() {
+	std::string desc;
+	for(auto& stat : statements) {
+		desc += "  " + stat->toString() + "\n";
+	}
+	return ":\n" + desc;
+}

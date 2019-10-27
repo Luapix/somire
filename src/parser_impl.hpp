@@ -11,8 +11,7 @@ Parser<C>::Parser(C start, C end)
 
 template <typename C>
 std::unique_ptr<Node> Parser<C>::testParse() {
-	discardToken(N_NL);
-	return parseStatement();
+	return parseProgram();
 }
 
 template <typename C>
@@ -368,6 +367,18 @@ std::unique_ptr<Node> Parser<C>::parseStatement() {
 	} else {
 		error("Unexpected token at start of statement: " + curToken->toString());
 	}
+}
+
+template <typename C>
+std::unique_ptr<NodeProgram> Parser<C>::parseProgram() {
+	std::vector<std::unique_ptr<Node>> statements;
+	while(curToken->type != N_EOI) {
+		discardToken(N_NL);
+		while(curToken->type == N_NL) nextToken();
+		if(curToken->type == N_EOI) break;
+		statements.push_back(parseStatement());
+	}
+	return std::unique_ptr<NodeProgram>(new NodeProgram(std::move(statements)));
 }
 
 
