@@ -9,7 +9,7 @@ OUTPUT := somire.exe
 build: $(OUTPUT)
 
 test: $(OUTPUT) input.txt
-	./$(OUTPUT) parse input.txt
+	./$(OUTPUT) compile input.txt
 
 clean:
 	rm -f build/*
@@ -18,7 +18,7 @@ clean:
 debug: CFLAGS := -g $(CFLAGS)
 debug: $(OUTPUT)
 
-$(OBJ_FILES): build/%.o : src/%.cpp src/*.hpp
+$(OBJ_FILES): build/%.o : src/%.cpp src/*.hpp src/*.tpp
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OUTPUT): $(OBJ_FILES)
