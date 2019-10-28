@@ -1,9 +1,14 @@
 #include <iostream>
 #include <fstream>
 #include <cstdint>
+#include <memory>
+#include <string>
 
+#include "ast.hpp"
+#include "chunk.hpp"
 #include "parser.hpp"
 #include "compiler.hpp"
+#include "vm.hpp"
 
 int main(int argc, char const *argv[]) {
 	if(argc != 3) {
@@ -11,10 +16,15 @@ int main(int argc, char const *argv[]) {
 		return 1;
 	}
 	std::string op(argv[1]);
+	std::string inputPath(argv[2]);
 	if(op == "parse") {
-		std::ifstream fs(argv[2]);
+		std::ifstream inputFile(inputPath);
+		if(!inputFile) {
+			std::cout << "Could not open input file" << std::endl;
+			return 1;
+		}
 		try {
-			auto parser = newFileParser(fs);
+			auto parser = newFileParser(inputFile);
 			std::unique_ptr<Node> node = parser.parseProgram();
 			std::cout << node->toString() << std::endl;
 		} catch(ParseError& e) {
@@ -22,11 +32,14 @@ int main(int argc, char const *argv[]) {
 			return 1;
 		}
 	} else if(op == "compile") {
-		std::string inputPath(argv[2]);
 		std::unique_ptr<Node> program;
 		{
 			std::cout << "Parsing..." << std::endl;
 			std::ifstream inputFile(inputPath);
+			if(!inputFile) {
+				std::cout << "Could not open input file" << std::endl;
+				return 1;
+			}
 			try {
 				auto parser = newFileParser(inputFile);
 				program = parser.parseProgram();
@@ -39,9 +52,19 @@ int main(int argc, char const *argv[]) {
 		{
 			std::cout << "Compiling..." << std::endl;
 			std::ofstream outputFile(outputPath, std::ios::binary);
-			Compiler compiler(std::move(program));
-			compiler.writeProgram(outputFile);
+			Compiler compiler;
+			std::unique_ptr<Chunk> chunk = compiler.compileChunk(std::move(program));
+			chunk->writeToFile(outputFile);
 		}
+	} else if(op == "run") {
+		std::ifstream inputFile(inputPath, std::ios::binary);
+		if(!inputFile) {
+			std::cout << "Could not open bytecode file" << std::endl;
+			return 1;
+		}
+		VM vm;
+		std::unique_ptr<Chunk> chunk = Chunk::loadFromFile(inputFile);
+		vm.run(*chunk);
 	} else {
 		std::cout << "Unknown operation: " << op << std::endl;
 		return 1;
