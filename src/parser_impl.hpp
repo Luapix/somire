@@ -365,7 +365,7 @@ std::unique_ptr<Node> Parser<C>::parseStatement() {
 		std::unique_ptr<Node> expr = parseExpr();
 		return std::unique_ptr<Node>(new NodeLet(id, std::move(expr)));
 	} else {
-		error("Unexpected token at start of statement: " + curToken->toString());
+		return std::unique_ptr<Node>(new NodeExprStat(parseExpr()));
 	}
 }
 
