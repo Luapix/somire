@@ -10,11 +10,6 @@ Parser<C>::Parser(C start, C end)
 }
 
 template <typename C>
-std::unique_ptr<Node> Parser<C>::testParse() {
-	return parseProgram();
-}
-
-template <typename C>
 [[noreturn]] void Parser<C>::error(std::string cause) {
 	throw ParseError("At line " + std::to_string(curLine) + ": " + cause);
 }

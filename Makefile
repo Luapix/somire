@@ -6,8 +6,10 @@ SRC_FILES := $(wildcard src/*.cpp)
 OBJ_FILES := $(patsubst src/%.cpp,build/%.o,$(SRC_FILES))
 OUTPUT := somire.exe
 
-run: $(OUTPUT) input.txt
-	./$(OUTPUT) input.txt
+build: $(OUTPUT)
+
+test: $(OUTPUT) input.txt
+	./$(OUTPUT) parse input.txt
 
 clean:
 	rm -f build/*
