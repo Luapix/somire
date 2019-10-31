@@ -19,26 +19,26 @@ public:
 };
 
 
-enum NodeType {
-	N_NL, N_INDENT, N_DEDENT, N_EOI,
-	N_ID, N_INT, N_REAL, N_STR,
-	N_SYM,
-	N_UNI_OP, N_BIN_OP,
-	N_LET, N_EXPR_STAT,
-	N_BLOCK
+enum class NodeType {
+	NL, INDENT, DEDENT, EOI,
+	ID, INT, REAL, STR,
+	SYM,
+	UNI_OP, BIN_OP,
+	LET, EXPR_STAT,
+	BLOCK
 };
 
 std::string nodeTypeDesc(NodeType type);
 
 class Node {
 public:
+	const NodeType type;
+	
 	Node(NodeType type);
 	virtual ~Node() = default;
 	
 	std::string toString();
 	
-	const NodeType type;
-
 protected:
 	virtual std::string getDataDesc();
 };

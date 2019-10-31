@@ -52,11 +52,11 @@ std::unique_ptr<Node> Parser<C>::lexNewline() {
 	}
 	NodeType type;
 	if(newIndent == curIndent) {
-		type = N_NL;
+		type = NodeType::NL;
 	} else if(newIndent.substr(0, curIndent.length()) == curIndent) {
-		type = N_INDENT;
+		type = NodeType::INDENT;
 	} else if(curIndent.substr(0, newIndent.length()) == newIndent) {
-		type = N_DEDENT;
+		type = NodeType::DEDENT;
 	} else {
 		error("Invalid indentation");
 	}
@@ -244,7 +244,7 @@ std::unique_ptr<Node> Parser<C>::lexToken() {
 	else if(curChar == '\n')
 		token = lexNewline();
 	else if(curChar == UNI_EOI)
-		token = std::unique_ptr<Node>(new Node(N_EOI));
+		token = std::unique_ptr<Node>(new Node(NodeType::EOI));
 	else
 		token = lexSymbol();
 	
@@ -268,12 +268,12 @@ void Parser<C>::discardToken(NodeType type) {
 
 template <typename C>
 bool Parser<C>::isCurSymbol(std::string sym) {
-	if(curToken->type != N_SYM) return false;
+	if(curToken->type != NodeType::SYM) return false;
 	NodeSymbol* symToken = static_cast<NodeSymbol*>(curToken.get());
 	return symToken->val == sym;
 }
 
-std::unordered_set<NodeType> terminals = { N_ID, N_INT, N_REAL, N_STR };
+std::unordered_set<NodeType> terminals = { NodeType::ID, NodeType::INT, NodeType::REAL, NodeType::STR };
 std::unordered_set<std::string> prefixOperators = { "+", "-", "not" };
 std::unordered_set<std::string> infixOperators = { "+", "-", "*", "/", "^", "and", "or", "(" };
 std::unordered_set<std::string> rightAssociativeOperators = { "^" };
@@ -289,7 +289,7 @@ std::unordered_map<std::string, int> operatorPrecedence = {
 
 template <typename C>
 int Parser<C>::getInfixPrecedence() {
-	if(curToken->type == N_SYM) {
+	if(curToken->type == NodeType::SYM) {
 		std::string sym = static_cast<NodeSymbol*>(curToken.get())->val;
 		if(infixOperators.find(sym) != infixOperators.end()) {
 			return operatorPrecedence[sym];
@@ -303,7 +303,7 @@ std::unique_ptr<Node> Parser<C>::parseExpr(int prec) {
 	std::unique_ptr<Node> exp;
 	if(terminals.find(curToken->type) != terminals.end()) {
 		exp = nextToken();
-	} else if(curToken->type == N_SYM) {
+	} else if(curToken->type == NodeType::SYM) {
 		std::unique_ptr<NodeSymbol> symbol(static_cast<NodeSymbol*>(nextToken().release()));
 		if(prefixOperators.find(symbol->val) != prefixOperators.end()) {
 			int prec2 = operatorPrecedence[symbol->val];
@@ -351,7 +351,7 @@ std::unique_ptr<Node> Parser<C>::parseStatement() {
 	if(isCurSymbol("let")) {
 		nextToken();
 		std::unique_ptr<Node> idToken = nextToken();
-		if(idToken->type != N_ID)
+		if(idToken->type != NodeType::ID)
 			error("Expected identifier after 'let', got " + nodeTypeDesc(idToken->type));
 		std::string id = static_cast<NodeId*>(idToken.get())->val;
 		if(!isCurSymbol("="))
@@ -367,10 +367,10 @@ std::unique_ptr<Node> Parser<C>::parseStatement() {
 template <typename C>
 std::unique_ptr<NodeBlock> Parser<C>::parseProgram() {
 	std::vector<std::unique_ptr<Node>> statements;
-	while(curToken->type != N_EOI) {
-		discardToken(N_NL);
-		while(curToken->type == N_NL) nextToken();
-		if(curToken->type == N_EOI) break;
+	while(curToken->type != NodeType::EOI) {
+		discardToken(NodeType::NL);
+		while(curToken->type == NodeType::NL) nextToken();
+		if(curToken->type == NodeType::EOI) break;
 		statements.push_back(parseStatement());
 	}
 	return std::unique_ptr<NodeBlock>(new NodeBlock(std::move(statements)));

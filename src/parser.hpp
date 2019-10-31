@@ -65,6 +65,6 @@ private:
 
 Parser<std::istreambuf_iterator<char>> newFileParser(std::ifstream& fs);
 
-#include "parser_impl.hpp"
+#include "parser.tpp"
 
 #endif

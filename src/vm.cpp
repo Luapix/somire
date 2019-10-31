@@ -3,9 +3,6 @@
 #include <iostream>
 #include <string>
 
-ExecutionError::ExecutionError(const std::string& what)
-	: runtime_error("Execution error: " + what) { }
-
 VM::VM() {}
 
 void VM::run(Chunk& chunk) {
@@ -13,7 +10,7 @@ void VM::run(Chunk& chunk) {
 	while(pc < chunk.bytecode.size()) {
 		Opcode op = static_cast<Opcode>(chunk.bytecode[pc]);
 		switch(op) {
-		case NO_OP:
+		case Opcode::NO_OP:
 			pc++;
 			break;
 		default:

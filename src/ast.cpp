@@ -7,20 +7,20 @@ ParseError::ParseError(const std::string& what)
 
 std::string nodeTypeDesc(NodeType type) {
 	switch(type) {
-	case N_NL: return "newline";
-	case N_INDENT: return "indent";
-	case N_DEDENT: return "dedent";
-	case N_EOI: return "EOI";
-	case N_ID: return "identifier";
-	case N_INT: return "int";
-	case N_REAL: return "real";
-	case N_STR: return "string";
-	case N_SYM: return "symbol";
-	case N_UNI_OP: return "unitary";
-	case N_BIN_OP: return "binary";
-	case N_LET: return "let";
-	case N_EXPR_STAT: return "expression statement";
-	case N_BLOCK: return "block";
+	case NodeType::NL: return "newline";
+	case NodeType::INDENT: return "indent";
+	case NodeType::DEDENT: return "dedent";
+	case NodeType::EOI: return "EOI";
+	case NodeType::ID: return "identifier";
+	case NodeType::INT: return "int";
+	case NodeType::REAL: return "real";
+	case NodeType::STR: return "string";
+	case NodeType::SYM: return "symbol";
+	case NodeType::UNI_OP: return "unitary";
+	case NodeType::BIN_OP: return "binary";
+	case NodeType::LET: return "let";
+	case NodeType::EXPR_STAT: return "expression statement";
+	case NodeType::BLOCK: return "block";
 	default:
 		throw std::runtime_error("Unimplemented token type");
 	}
@@ -34,19 +34,19 @@ std::string Node::toString() {
 
 std::string Node::getDataDesc() { return ""; }
 
-NodeId::NodeId(std::string val) : Node(N_ID), val(val) {}
+NodeId::NodeId(std::string val) : Node(NodeType::ID), val(val) {}
 
 std::string NodeId::getDataDesc() {
 	return " " + val;
 }
 
-NodeInt::NodeInt(std::int32_t val) : Node(N_INT), val(val) {}
+NodeInt::NodeInt(std::int32_t val) : Node(NodeType::INT), val(val) {}
 
 std::string NodeInt::getDataDesc() {
 	return " " + std::to_string(val);
 }
 
-NodeReal::NodeReal(double val) : Node(N_REAL), val(val) {}
+NodeReal::NodeReal(double val) : Node(NodeType::REAL), val(val) {}
 
 std::string NodeReal::getDataDesc() {
 	char buf[50];
@@ -67,7 +67,7 @@ std::string NodeReal::getDataDesc() {
 	return " " + std::string(buf);
 }
 
-NodeString::NodeString(std::string val) : Node(N_STR), val(val) {}
+NodeString::NodeString(std::string val) : Node(NodeType::STR), val(val) {}
 
 std::string NodeString::getDataDesc() {
 	std::string res;
@@ -98,31 +98,31 @@ std::string NodeString::getDataDesc() {
 	return " '" + res + "'";
 }
 
-NodeSymbol::NodeSymbol(std::string val) : Node(N_SYM), val(val) {}
+NodeSymbol::NodeSymbol(std::string val) : Node(NodeType::SYM), val(val) {}
 
 std::string NodeSymbol::getDataDesc() { return " " + val; }
 
 NodeUnitary::NodeUnitary(std::string op, std::unique_ptr<Node> val)
-	: Node(N_UNI_OP), op(op), val(std::move(val)) {}
+	: Node(NodeType::UNI_OP), op(op), val(std::move(val)) {}
 
 std::string NodeUnitary::getDataDesc() { return " " + op + " " + val->toString(); }
 
 NodeBinary::NodeBinary(std::string op, std::unique_ptr<Node> left, std::unique_ptr<Node> right)
-	: Node(N_BIN_OP), op(op), left(std::move(left)), right(std::move(right)) {}
+	: Node(NodeType::BIN_OP), op(op), left(std::move(left)), right(std::move(right)) {}
 
 std::string NodeBinary::getDataDesc() { return " " + op + " " + left->toString() + " " + right->toString(); }
 
 NodeLet::NodeLet(std::string id, std::unique_ptr<Node> exp)
-	: Node(N_LET), id(id), exp(std::move(exp)) {}
+	: Node(NodeType::LET), id(id), exp(std::move(exp)) {}
 
 std::string NodeLet::getDataDesc() { return " " + id + " = " + exp->toString(); }
 
-NodeExprStat::NodeExprStat(std::unique_ptr<Node> exp) : Node(N_EXPR_STAT), exp(std::move(exp)) {}
+NodeExprStat::NodeExprStat(std::unique_ptr<Node> exp) : Node(NodeType::EXPR_STAT), exp(std::move(exp)) {}
 
 std::string NodeExprStat::getDataDesc() { return " " + exp->toString(); }
 
 NodeBlock::NodeBlock(std::vector<std::unique_ptr<Node>> statements)
-	: Node(N_BLOCK), statements(std::move(statements)) {}
+	: Node(NodeType::BLOCK), statements(std::move(statements)) {}
 
 std::string NodeBlock::getDataDesc() {
 	std::string desc;

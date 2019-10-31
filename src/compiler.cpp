@@ -7,12 +7,12 @@ Compiler::Compiler() {}
 
 std::unique_ptr<Chunk> Compiler::compileChunk(std::unique_ptr<Node> ast) {
 	std::unique_ptr<Chunk> chunk(new Chunk());
-	if(ast->type != N_BLOCK)
+	if(ast->type != NodeType::BLOCK)
 		throw CompileError("Expected block to compile, got " + nodeTypeDesc(ast->type));
 	compileBlock(*chunk, static_cast<NodeBlock&>(*ast));
 	return chunk;
 }
 
 void Compiler::compileBlock(Chunk& chunk, NodeBlock& block) {
-	chunk.bytecode.push_back(NO_OP);
+	chunk.bytecode.push_back((uint8_t) Opcode::NO_OP);
 }
