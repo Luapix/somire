@@ -23,7 +23,7 @@ std::unique_ptr<Chunk> Chunk::loadFromFile(I& input) {
 	
 	input.seekg(0, std::ios::end);
 	size_t size = (size_t) input.tellg() - magicBytes.size();
-	chunk->bytecode.reserve(size);
+	chunk->bytecode.resize(size);
 	
 	input.seekg(magicBytes.size(), std::ios::beg);
 	input.read((char*) chunk->bytecode.data(), size);

@@ -28,7 +28,7 @@ class Parser {
 public:
 	Parser(C start, C end);
 	
-	std::unique_ptr<NodeProgram> parseProgram();
+	std::unique_ptr<NodeBlock> parseProgram();
 	
 private:
 	C curByte;

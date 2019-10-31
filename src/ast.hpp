@@ -25,7 +25,7 @@ enum NodeType {
 	N_SYM,
 	N_UNI_OP, N_BIN_OP,
 	N_LET, N_EXPR_STAT,
-	N_PROG
+	N_BLOCK
 };
 
 std::string nodeTypeDesc(NodeType type);
@@ -136,9 +136,9 @@ protected:
 	std::string getDataDesc() override;
 };
 
-class NodeProgram : public Node {
+class NodeBlock : public Node {
 public:
-	NodeProgram(std::vector<std::unique_ptr<Node>> statements);
+	NodeBlock(std::vector<std::unique_ptr<Node>> statements);
 	
 	const std::vector<std::unique_ptr<Node>> statements;
 	

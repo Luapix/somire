@@ -365,7 +365,7 @@ std::unique_ptr<Node> Parser<C>::parseStatement() {
 }
 
 template <typename C>
-std::unique_ptr<NodeProgram> Parser<C>::parseProgram() {
+std::unique_ptr<NodeBlock> Parser<C>::parseProgram() {
 	std::vector<std::unique_ptr<Node>> statements;
 	while(curToken->type != N_EOI) {
 		discardToken(N_NL);
@@ -373,7 +373,7 @@ std::unique_ptr<NodeProgram> Parser<C>::parseProgram() {
 		if(curToken->type == N_EOI) break;
 		statements.push_back(parseStatement());
 	}
-	return std::unique_ptr<NodeProgram>(new NodeProgram(std::move(statements)));
+	return std::unique_ptr<NodeBlock>(new NodeBlock(std::move(statements)));
 }
 
 

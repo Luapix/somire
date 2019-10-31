@@ -20,7 +20,7 @@ std::string nodeTypeDesc(NodeType type) {
 	case N_BIN_OP: return "binary";
 	case N_LET: return "let";
 	case N_EXPR_STAT: return "expression statement";
-	case N_PROG: return "program";
+	case N_BLOCK: return "block";
 	default:
 		throw std::runtime_error("Unimplemented token type");
 	}
@@ -117,17 +117,17 @@ NodeLet::NodeLet(std::string id, std::unique_ptr<Node> exp)
 
 std::string NodeLet::getDataDesc() { return " " + id + " = " + exp->toString(); }
 
-NodeProgram::NodeProgram(std::vector<std::unique_ptr<Node>> statements)
-	: Node(N_PROG), statements(std::move(statements)) {}
+NodeExprStat::NodeExprStat(std::unique_ptr<Node> exp) : Node(N_EXPR_STAT), exp(std::move(exp)) {}
 
-std::string NodeProgram::getDataDesc() {
+std::string NodeExprStat::getDataDesc() { return " " + exp->toString(); }
+
+NodeBlock::NodeBlock(std::vector<std::unique_ptr<Node>> statements)
+	: Node(N_BLOCK), statements(std::move(statements)) {}
+
+std::string NodeBlock::getDataDesc() {
 	std::string desc;
 	for(auto& stat : statements) {
 		desc += "  " + stat->toString() + "\n";
 	}
 	return ":\n" + desc;
 }
-
-NodeExprStat::NodeExprStat(std::unique_ptr<Node> exp) : Node(N_EXPR_STAT), exp(std::move(exp)) {}
-
-std::string NodeExprStat::getDataDesc() { return " " + exp->toString(); }
