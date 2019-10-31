@@ -13,7 +13,13 @@ void VM::run(Chunk& chunk) {
 		case Opcode::NO_OP:
 			pc++;
 			break;
-		default:
+		case Opcode::CONSTANT: {
+			uint8_t constantIdx = chunk.bytecode[pc+1];
+			Value& val = *chunk.constants.at(constantIdx);
+			std::cout << "Constant n°" << (int) constantIdx << " = " << val.toString() << std::endl;
+			pc += 2;
+			break;
+		} default:
 			throw ExecutionError("Opcode " + std::to_string((int) op) + " not yet implemented");
 		}
 	}

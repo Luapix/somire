@@ -10,8 +10,12 @@
 constexpr std::array<uint8_t, 8> magicBytes = { 'S','o','m','i','r','&', 0, 1 };
 
 enum class Opcode : uint8_t {
-	NO_OP
+	NO_OP,
+	CONSTANT
 };
+
+std::array<uint8_t, 4> serializeUInt(uint32_t x);
+uint32_t parseUInt(std::array<uint8_t, 4> b);
 
 class Chunk {
 public:

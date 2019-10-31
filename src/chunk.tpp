@@ -7,8 +7,10 @@ template <typename O>
 void Chunk::writeToFile(O& output) {
 	output.write((const char*) magicBytes.data(), magicBytes.size());
 	
-	uint32_t constantCnt = constants.size();
-	output.write((const char*) &constantCnt, sizeof(uint32_t));
+	if(constants.size() > 0xff)
+		throw std::runtime_error("Too many constants in chunk");
+	uint8_t constantCnt = constants.size();
+	output.write((const char*) &constantCnt, sizeof(constantCnt));
 	
 	for(std::unique_ptr<Value>& cnst : constants) {
 		writeConstantToFile(output, *cnst);
@@ -26,24 +28,20 @@ std::unique_ptr<Chunk> Chunk::loadFromFile(I& input) {
 	std::array<uint8_t, magicBytes.size()> buffer;
 	input.read((char*) buffer.data(), buffer.size());
 	if((int) input.gcount() != (int) buffer.size()) {
-		throw ExecutionError("Unexpected EOF in bytecode file");
+		throw std::runtime_error("Unexpected EOF in bytecode file");
 	}
 	if(buffer != magicBytes) {
-		throw ExecutionError("Invalid Somiré bytecode file");
+		throw std::runtime_error("Invalid Somiré bytecode file");
 	}
 	
-	uint32_t constantCnt;
-	input.read((char*) &constantCnt, sizeof(uint32_t));
+	uint8_t constantCnt;
+	input.read((char*) &constantCnt, sizeof(constantCnt));
 	
-	std::cout << "Loading " << constantCnt << " constants..." << std::endl;
-	
-	for(uint32_t i = 0; i < constantCnt; i++) {
+	for(uint8_t i = 0; i < constantCnt; i++) {
 		chunk->loadConstantFromFile(input);
-		std::cout << ":: " << chunk->constants.back()->toString() << std::endl;
 	}
 	
 	size_t bytecodeStart = (size_t) input.tellg();
-	
 	input.seekg(0, std::ios::end);
 	size_t size = (size_t) input.tellg() - bytecodeStart;
 	chunk->bytecode.resize(size);
@@ -62,11 +60,12 @@ void Chunk::writeConstantToFile(O& output, Value& val) {
 	switch(type) {
 	case ValueType::NIL:
 		break;
-	case ValueType::INT:
-		output.write((const char*) &static_cast<ValueInt&>(val).val, sizeof(int32_t));
+	case ValueType::INT: {
+		std::array<uint8_t, 4> buf = serializeUInt((uint32_t) static_cast<ValueInt&>(val).val);
+		output.write((const char*) buf.data(), buf.size());
 		break;
-	default:
-		throw ExecutionError("Constant serialization is unimplemented for this type");
+	} default:
+		throw std::runtime_error("Constant serialization is unimplemented for this type");
 	}
 }
 
@@ -79,12 +78,13 @@ void Chunk::loadConstantFromFile(I& input) {
 	case ValueType::NIL:
 		constants.push_back(std::unique_ptr<Value>(new Value(type)));
 		break;
-	case ValueType::INT:
-		int32_t val;
-		input.read((char*) &val, sizeof(int32_t));
+	case ValueType::INT: {
+		std::array<uint8_t, 4> buf;
+		input.read((char*) buf.data(), buf.size());
+		int32_t val = (int32_t) parseUInt(buf);
 		constants.push_back(std::unique_ptr<Value>(new ValueInt(val)));
 		break;
-	default:
-		throw ExecutionError("Constant unserialization is unimplemented for type " + std::to_string((int) type));
+	} default:
+		throw std::runtime_error("Constant unserialization is unimplemented for type " + std::to_string((int) type));
 	}
 }

@@ -14,5 +14,11 @@ std::unique_ptr<Chunk> Compiler::compileChunk(std::unique_ptr<Node> ast) {
 }
 
 void Compiler::compileBlock(Chunk& chunk, NodeBlock& block) {
-	chunk.bytecode.push_back((uint8_t) Opcode::NO_OP);
+	chunk.constants.push_back(std::unique_ptr<Value>(new Value(ValueType::NIL)));
+	chunk.constants.push_back(std::unique_ptr<Value>(new ValueInt(42)));
+	
+	chunk.bytecode.push_back((uint8_t) Opcode::CONSTANT);
+	chunk.bytecode.push_back((uint8_t) 0);
+	chunk.bytecode.push_back((uint8_t) Opcode::CONSTANT);
+	chunk.bytecode.push_back((uint8_t) 1);
 }
