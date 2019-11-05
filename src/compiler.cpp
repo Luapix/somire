@@ -33,8 +33,8 @@ void Compiler::compileExpression(Chunk& chunk, Node& expr) {
 	switch(expr.type) {
 	case NodeType::INT:
 		chunk.bytecode.push_back((uint8_t) Opcode::CONSTANT);
-		chunk.bytecode.push_back((uint8_t) chunk.constants.size());
-		chunk.constants.emplace_back(new ValueInt(static_cast<NodeInt&>(expr).val));
+		chunk.bytecode.push_back((uint8_t) chunk.constants->vec.size());
+		chunk.constants->vec.push_back(new ValueInt(static_cast<NodeInt&>(expr).val));
 		break;
 	default:
 		throw CompileError("Expression type not implemented: " + nodeTypeDesc(expr.type));

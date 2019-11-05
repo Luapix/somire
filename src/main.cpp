@@ -56,15 +56,19 @@ int main(int argc, char const *argv[]) {
 			std::unique_ptr<Chunk> chunk = compiler.compileChunk(std::move(program));
 			chunk->writeToFile(outputFile);
 		}
+		GC::collect();
 	} else if(op == "run") {
 		std::ifstream inputFile(inputPath, std::ios::binary);
 		if(!inputFile) {
 			std::cout << "Could not open bytecode file" << std::endl;
 			return 1;
 		}
-		VM vm;
-		std::unique_ptr<Chunk> chunk = Chunk::loadFromFile(inputFile);
-		vm.run(*chunk);
+		{
+			std::unique_ptr<Chunk> chunk = Chunk::loadFromFile(inputFile);
+			VM vm;
+			vm.run(*chunk);
+		}
+		GC::collect();
 	} else {
 		std::cout << "Unknown operation: " << op << std::endl;
 		return 1;

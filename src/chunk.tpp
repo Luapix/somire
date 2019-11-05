@@ -7,12 +7,12 @@ template <typename O>
 void Chunk::writeToFile(O& output) {
 	output.write((const char*) magicBytes.data(), magicBytes.size());
 	
-	if(constants.size() > 0xff)
+	if(constants->vec.size() > 0xff)
 		throw std::runtime_error("Too many constants in chunk");
-	uint8_t constantCnt = constants.size();
+	uint8_t constantCnt = constants->vec.size();
 	output.write((const char*) &constantCnt, sizeof(constantCnt));
 	
-	for(std::unique_ptr<Value>& cnst : constants) {
+	for(Value* cnst : constants->vec) {
 		writeConstantToFile(output, *cnst);
 	}
 	
@@ -76,13 +76,13 @@ void Chunk::loadConstantFromFile(I& input) {
 	
 	switch(type) {
 	case ValueType::NIL:
-		constants.push_back(std::unique_ptr<Value>(new Value(type)));
+		constants->vec.push_back(new Value(type));
 		break;
 	case ValueType::INT: {
 		std::array<uint8_t, 4> buf;
 		input.read((char*) buf.data(), buf.size());
 		int32_t val = (int32_t) parseUInt(buf);
-		constants.push_back(std::unique_ptr<Value>(new ValueInt(val)));
+		constants->vec.push_back(new ValueInt(val));
 		break;
 	} default:
 		throw std::runtime_error("Constant unserialization is unimplemented for type " + std::to_string((int) type));

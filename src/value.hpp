@@ -3,6 +3,8 @@
 #include <stdexcept>
 #include <cstdint>
 
+#include "gc.hpp"
+
 class ExecutionError : public std::runtime_error {
 public:
 	ExecutionError(const std::string& what);
@@ -13,7 +15,7 @@ enum class ValueType : uint8_t {
 	INT
 };
 
-class Value {
+class Value : public GC::GCObject {
 public:
 	const ValueType type;
 	

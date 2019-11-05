@@ -16,4 +16,10 @@ uint32_t parseUInt(std::array<uint8_t, 4> b) {
     return u0 | (u1 << 8) | (u2 << 16) | (u3 << 24);
 }
 
-Chunk::Chunk() {}
+Chunk::Chunk() : constants(new GC::GCVector<Value>()) {
+	GC::pin(constants);
+}
+
+Chunk::~Chunk() {
+	GC::unpin(constants);
+}

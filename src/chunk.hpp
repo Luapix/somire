@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include "value.hpp"
+#include "gc.hpp"
 
 constexpr std::array<uint8_t, 8> magicBytes = { 'S','o','m','i','r','&', 0, 1 };
 
@@ -19,10 +20,11 @@ uint32_t parseUInt(std::array<uint8_t, 4> b);
 
 class Chunk {
 public:
-	std::vector<std::unique_ptr<Value>> constants;
+	GC::GCVector<Value>* constants;
 	std::vector<uint8_t> bytecode;
 	
 	Chunk();
+	~Chunk();
 	
 	template <typename O>
 	void writeToFile(O& output);

@@ -3,7 +3,13 @@
 #include <iostream>
 #include <string>
 
-VM::VM() {}
+VM::VM() : stack(new GC::GCVector<Value>()) {
+	GC::pin(stack);
+}
+
+VM::~VM() {
+	GC::unpin(stack);
+}
 
 void VM::run(Chunk& chunk) {
 	uint32_t pc = 0;
@@ -15,8 +21,8 @@ void VM::run(Chunk& chunk) {
 			break;
 		case Opcode::CONSTANT: {
 			uint8_t constantIdx = chunk.bytecode[pc+1];
-			stack.emplace(std::move(chunk.constants.at(constantIdx))); // Constants can only be used once for now...
-			std::cout << "Loaded constant n°" << (int) constantIdx << " = " << stack.top()->toString() << std::endl;
+			stack->vec.push_back(chunk.constants->vec.at(constantIdx)); // Constants can only be used once for now...
+			std::cout << "Loaded constant n°" << (int) constantIdx << " = " << stack->vec.back()->toString() << std::endl;
 			pc += 2;
 			break;
 		} default:
