@@ -18,6 +18,10 @@ std::string Value::toString() {
 
 ValueInt::ValueInt(int32_t val) : Value(ValueType::INT), val(val) {}
 
+ValueInt* ValueInt::negate() {
+	return new ValueInt(-val);
+}
+
 std::string ValueInt::toString() {
 	return std::to_string(val);
 }

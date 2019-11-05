@@ -35,18 +35,19 @@ namespace GC {
 		virtual void markChildren();
 	};
 	
+	template<typename T>
 	class GCRoot {
 	public:
-		GCRoot(GCObject* obj);
+		GCRoot(T* obj);
 		~GCRoot();
 		
-		GCObject* get();
+		T* get();
 		
-		GCObject& operator*();
-		GCObject* operator->();
+		T& operator*();
+		T* operator->();
 		
 	private:
-		GCObject* obj;
+		T* obj;
 	};
 	
 	template<typename T>

@@ -83,18 +83,4 @@ namespace GC {
 	bool GCObject::isMarked() { return _marked; }
 	
 	void GCObject::markChildren() {}
-	
-	
-	GCRoot::GCRoot(GCObject* obj) : obj(obj) {
-		pin(obj);
-	}
-	
-	GCRoot::~GCRoot() {
-		unpin(obj);
-	}
-	
-	GCObject* GCRoot::get() { return obj; }
-	
-	GCObject& GCRoot::operator*() { return *obj; }
-	GCObject* GCRoot::operator->() { return obj; }
 }

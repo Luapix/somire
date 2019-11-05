@@ -25,6 +25,17 @@ void VM::run(Chunk& chunk) {
 			std::cout << "Loaded constant n°" << (int) constantIdx << " = " << stack->vec.back()->toString() << std::endl;
 			pc += 2;
 			break;
+		} case Opcode::UNI_MINUS: {
+			GC::GCRoot<Value> val(stack->vec.back());
+			stack->vec.pop_back();
+			if(val->type == ValueType::INT) {
+				stack->vec.push_back(static_cast<ValueInt&>(*val).negate());
+				std::cout << "Negated stack top; now equal to " << stack->vec.back()->toString() << std::endl;
+				pc++;
+			} else {
+				throw ExecutionError("Cannot negate value " + val->toString());
+			}
+			break;
 		} default:
 			throw ExecutionError("Opcode " + std::to_string((int) op) + " not yet implemented");
 		}

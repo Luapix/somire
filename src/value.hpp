@@ -31,5 +31,7 @@ public:
 	
 	ValueInt(int32_t val);
 	
+	ValueInt* negate();
+	
 	std::string toString() override;
 };

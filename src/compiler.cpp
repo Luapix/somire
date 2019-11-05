@@ -36,7 +36,16 @@ void Compiler::compileExpression(Chunk& chunk, Node& expr) {
 		chunk.bytecode.push_back((uint8_t) chunk.constants->vec.size());
 		chunk.constants->vec.push_back(new ValueInt(static_cast<NodeInt&>(expr).val));
 		break;
-	default:
+	case NodeType::UNI_OP: {
+		NodeUnary& expr2 = static_cast<NodeUnary&>(expr);
+		compileExpression(chunk, *expr2.val);
+		if(expr2.op == "-") {
+			chunk.bytecode.push_back((uint8_t) Opcode::UNI_MINUS);
+		} else {
+			throw CompileError("Unknown unary operator: " + expr2.op);
+		}
+		break;
+	} default:
 		throw CompileError("Expression type not implemented: " + nodeTypeDesc(expr.type));
 	}
 }
