@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stack>
+
 #include "chunk.hpp"
 #include "value.hpp"
 
@@ -8,4 +10,7 @@ public:
 	VM();
 	
 	void run(Chunk& chunk);
+	
+private:
+	std::stack<std::unique_ptr<Value>> stack;
 };

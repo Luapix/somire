@@ -14,11 +14,29 @@ std::unique_ptr<Chunk> Compiler::compileChunk(std::unique_ptr<Node> ast) {
 }
 
 void Compiler::compileBlock(Chunk& chunk, NodeBlock& block) {
-	chunk.constants.push_back(std::unique_ptr<Value>(new Value(ValueType::NIL)));
-	chunk.constants.push_back(std::unique_ptr<Value>(new ValueInt(42)));
-	
-	chunk.bytecode.push_back((uint8_t) Opcode::CONSTANT);
-	chunk.bytecode.push_back((uint8_t) 0);
-	chunk.bytecode.push_back((uint8_t) Opcode::CONSTANT);
-	chunk.bytecode.push_back((uint8_t) 1);
+	for(const std::unique_ptr<Node>& stat : block.statements) {
+		compileStatement(chunk, *stat);
+	}
+}
+
+void Compiler::compileStatement(Chunk& chunk, Node& stat) {
+	switch(stat.type) {
+	case NodeType::EXPR_STAT:
+		compileExpression(chunk, *static_cast<NodeExprStat&>(stat).exp);
+		break;
+	default:
+		throw CompileError("Statement type not implemented: " + nodeTypeDesc(stat.type));
+	}
+}
+
+void Compiler::compileExpression(Chunk& chunk, Node& expr) {
+	switch(expr.type) {
+	case NodeType::INT:
+		chunk.bytecode.push_back((uint8_t) Opcode::CONSTANT);
+		chunk.bytecode.push_back((uint8_t) chunk.constants.size());
+		chunk.constants.emplace_back(new ValueInt(static_cast<NodeInt&>(expr).val));
+		break;
+	default:
+		throw CompileError("Expression type not implemented: " + nodeTypeDesc(expr.type));
+	}
 }

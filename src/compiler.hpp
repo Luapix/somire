@@ -19,4 +19,6 @@ public:
 	
 private:
 	void compileBlock(Chunk& chunk, NodeBlock& block);
+	void compileStatement(Chunk& chunk, Node& stat);
+	void compileExpression(Chunk& chunk, Node& expr);
 };

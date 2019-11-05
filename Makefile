@@ -10,6 +10,7 @@ build: $(OUTPUT)
 
 test: $(OUTPUT) input.txt
 	./$(OUTPUT) compile input.txt
+	./$(OUTPUT) run input.out
 
 clean:
 	rm -f build/*
