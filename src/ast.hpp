@@ -93,9 +93,9 @@ protected:
 	std::string getDataDesc() override;
 };
 
-class NodeUnitary : public Node {
+class NodeUnary : public Node {
 public:
-	NodeUnitary(std::string op, std::unique_ptr<Node> val);
+	NodeUnary(std::string op, std::unique_ptr<Node> val);
 	
 	const std::string op;
 	const std::unique_ptr<Node> val;

@@ -307,7 +307,7 @@ std::unique_ptr<Node> Parser<C>::parseExpr(int prec) {
 		std::unique_ptr<NodeSymbol> symbol(static_cast<NodeSymbol*>(nextToken().release()));
 		if(prefixOperators.find(symbol->val) != prefixOperators.end()) {
 			int prec2 = operatorPrecedence[symbol->val];
-			exp = std::unique_ptr<Node>(new NodeUnitary(symbol->val, parseExpr(prec2)));
+			exp = std::unique_ptr<Node>(new NodeUnary(symbol->val, parseExpr(prec2)));
 		} else if(symbol->val == "(") {
 			exp = parseExpr(0);
 			if(isCurSymbol(")")) {

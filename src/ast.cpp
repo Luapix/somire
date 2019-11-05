@@ -102,10 +102,10 @@ NodeSymbol::NodeSymbol(std::string val) : Node(NodeType::SYM), val(val) {}
 
 std::string NodeSymbol::getDataDesc() { return " " + val; }
 
-NodeUnitary::NodeUnitary(std::string op, std::unique_ptr<Node> val)
+NodeUnary::NodeUnary(std::string op, std::unique_ptr<Node> val)
 	: Node(NodeType::UNI_OP), op(op), val(std::move(val)) {}
 
-std::string NodeUnitary::getDataDesc() { return " " + op + " " + val->toString(); }
+std::string NodeUnary::getDataDesc() { return " " + op + " " + val->toString(); }
 
 NodeBinary::NodeBinary(std::string op, std::unique_ptr<Node> left, std::unique_ptr<Node> right)
 	: Node(NodeType::BIN_OP), op(op), left(std::move(left)), right(std::move(right)) {}
