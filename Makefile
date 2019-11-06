@@ -19,6 +19,9 @@ clean:
 debug: CFLAGS := -g $(CFLAGS)
 debug: $(OUTPUT)
 
+debug-gc: CFLAGS := -DDEBUG_GC $(CFLAGS)
+debug-gc: $(OUTPUT)
+
 $(OBJ_FILES): build/%.o : src/%.cpp src/*.hpp src/*.tpp
 	$(CC) $(CFLAGS) -c $< -o $@
 

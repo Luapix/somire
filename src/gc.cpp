@@ -32,13 +32,11 @@ namespace GC {
 	}
 	
 	void collect() {
-		IF_DEBUG_GC(std::cout << "Marking..." << std::endl;)
+		IF_DEBUG_GC(std::cout << "Collecting..." << std::endl;)
 		
 		for(auto pair : rootObjects) {
 			pair.first->mark();
 		}
-		
-		IF_DEBUG_GC(std::cout << "Sweeping..." << std::endl;)
 		
 		auto it = objects.begin();
 		while(it != objects.end()) {
@@ -70,7 +68,6 @@ namespace GC {
 	
 	void GCObject::mark() {
 		if(!_marked) {
-			IF_DEBUG_GC(std::cout << "Marked GCObject " << this << std::endl;)
 			_marked = true;
 			markChildren();
 		}

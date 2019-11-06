@@ -69,6 +69,7 @@ int main(int argc, char const *argv[]) {
 			vm.run(*chunk);
 		}
 		GC::collect();
+		GC::logState();
 	} else {
 		std::cout << "Unknown operation: " << op << std::endl;
 		return 1;

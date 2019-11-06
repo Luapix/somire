@@ -39,5 +39,7 @@ void VM::run(Chunk& chunk) {
 		} default:
 			throw ExecutionError("Opcode " + std::to_string((int) op) + " not yet implemented");
 		}
+		GC::collect();
+		GC::logState();
 	}
 }
