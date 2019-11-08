@@ -22,6 +22,10 @@ ValueInt* ValueInt::negate() {
 	return new ValueInt(-val);
 }
 
+ValueInt* ValueInt::plus(ValueInt& other) {
+	return new ValueInt(val + other.val);
+}
+
 std::string ValueInt::toString() {
 	return std::to_string(val);
 }

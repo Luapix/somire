@@ -13,4 +13,6 @@ public:
 	
 private:
 	GC::GCVector<Value>* stack;
+	
+	Value* pop();
 };

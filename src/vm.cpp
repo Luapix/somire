@@ -26,8 +26,7 @@ void VM::run(Chunk& chunk) {
 			pc += 2;
 			break;
 		} case Opcode::UNI_MINUS: {
-			GC::GCRoot<Value> val(stack->vec.back());
-			stack->vec.pop_back();
+			GC::GCRoot<Value> val(pop());
 			if(val->type == ValueType::INT) {
 				stack->vec.push_back(static_cast<ValueInt&>(*val).negate());
 				std::cout << "Negated stack top; now equal to " << stack->vec.back()->toString() << std::endl;
@@ -36,10 +35,29 @@ void VM::run(Chunk& chunk) {
 				throw ExecutionError("Cannot negate value " + val->toString());
 			}
 			break;
+		} case Opcode::BIN_PLUS: {
+			GC::GCRoot<Value> right(pop());
+			GC::GCRoot<Value> left(pop());
+			if(left->type == ValueType::INT && right->type == ValueType::INT) {
+				stack->vec.push_back(static_cast<ValueInt&>(*left).plus(static_cast<ValueInt&>(*right)));
+				std::cout << "Added top two stack values; top now equal to " << stack->vec.back()->toString() << std::endl;
+				pc++;
+			} else {
+				throw ExecutionError("Cannot add " + left->toString() + " and " + right->toString());
+			}
+			break;
 		} default:
 			throw ExecutionError("Opcode " + std::to_string((int) op) + " not yet implemented");
 		}
 		GC::collect();
 		GC::logState();
 	}
+}
+
+Value* VM::pop() {
+	if(stack->vec.empty())
+		throw ExecutionError("Expected operand, stack empty");
+	Value* val = stack->vec.back();
+	stack->vec.pop_back();
+	return val;
 }

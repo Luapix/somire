@@ -45,6 +45,16 @@ void Compiler::compileExpression(Chunk& chunk, Node& expr) {
 			throw CompileError("Unknown unary operator: " + expr2.op);
 		}
 		break;
+	} case NodeType::BIN_OP: {
+		NodeBinary& expr2 = static_cast<NodeBinary&>(expr);
+		compileExpression(chunk, *expr2.left);
+		compileExpression(chunk, *expr2.right);
+		if(expr2.op == "+") {
+			chunk.bytecode.push_back((uint8_t) Opcode::BIN_PLUS);
+		} else {
+			throw CompileError("Unknown binary operator: " + expr2.op);
+		}
+		break;
 	} default:
 		throw CompileError("Expression type not implemented: " + nodeTypeDesc(expr.type));
 	}
