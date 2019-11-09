@@ -15,4 +15,5 @@ private:
 	GC::GCVector<Value>* stack;
 	
 	Value* pop();
+	void clearStack();
 };

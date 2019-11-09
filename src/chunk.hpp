@@ -11,7 +11,7 @@
 constexpr std::array<uint8_t, 8> magicBytes = { 'S','o','m','i','r','&', 0, 1 };
 
 enum class Opcode : uint8_t {
-	NO_OP,
+	IGNORE,
 	CONSTANT,
 	UNI_MINUS,
 	BIN_PLUS

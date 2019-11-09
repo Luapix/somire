@@ -23,6 +23,7 @@ void Compiler::compileStatement(Chunk& chunk, Node& stat) {
 	switch(stat.type) {
 	case NodeType::EXPR_STAT:
 		compileExpression(chunk, *static_cast<NodeExprStat&>(stat).exp);
+		chunk.bytecode.push_back((uint8_t) Opcode::IGNORE);
 		break;
 	default:
 		throw CompileError("Statement type not implemented: " + nodeTypeDesc(stat.type));

@@ -16,7 +16,8 @@ void VM::run(Chunk& chunk) {
 	while(pc < chunk.bytecode.size()) {
 		Opcode op = static_cast<Opcode>(chunk.bytecode[pc]);
 		switch(op) {
-		case Opcode::NO_OP:
+		case Opcode::IGNORE:
+			clearStack();
 			pc++;
 			break;
 		case Opcode::CONSTANT: {
@@ -52,4 +53,8 @@ Value* VM::pop() {
 	Value* val = stack->vec.back();
 	stack->vec.pop_back();
 	return val;
+}
+
+void VM::clearStack() {
+	stack->vec.clear();
 }

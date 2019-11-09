@@ -4,7 +4,7 @@
 
 std::string opcodeDesc(Opcode opcode) {
 	switch(opcode) {
-	case Opcode::NO_OP: return "NO_OP";
+	case Opcode::IGNORE: return "IGNORE";
 	case Opcode::CONSTANT: return "CONSTANT";
 	case Opcode::UNI_MINUS: return "UNI_MINUS";
 	case Opcode::BIN_PLUS: return "BIN_PLUS";
