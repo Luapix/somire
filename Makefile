@@ -6,6 +6,7 @@ SRC_FILES := $(wildcard src/*.cpp)
 OBJ_FILES := $(patsubst src/%.cpp,build/%.o,$(SRC_FILES))
 OUTPUT := somire.exe
 
+PYTHON3_CMD := python
 TIME_CMD := /c/msys64/usr/bin/time -p -q
 
 build: $(OUTPUT)
@@ -31,5 +32,5 @@ $(OUTPUT): $(OBJ_FILES)
 	$(CC) build/*.o -o $(OUTPUT)
 
 src/uni_data.cpp: tools/gen_uni_data.py tools/ppucd.txt
-	cd tools; python gen_uni_data.py
+	cd tools; $(PYTHON3_CMD) gen_uni_data.py
 	cp tools/uni_data.cpp src/uni_data.cpp
