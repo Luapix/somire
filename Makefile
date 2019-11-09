@@ -6,11 +6,13 @@ SRC_FILES := $(wildcard src/*.cpp)
 OBJ_FILES := $(patsubst src/%.cpp,build/%.o,$(SRC_FILES))
 OUTPUT := somire.exe
 
+TIME_CMD := /c/msys64/usr/bin/time -p -q
+
 build: $(OUTPUT)
 
 test: $(OUTPUT) input.txt
 	./$(OUTPUT) compile input.txt
-	./$(OUTPUT) run input.out
+	$(TIME_CMD) ./$(OUTPUT) run input.out
 
 clean:
 	rm -f build/*
