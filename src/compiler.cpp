@@ -32,11 +32,17 @@ void Compiler::compileStatement(Chunk& chunk, Node& stat) {
 void Compiler::compileExpression(Chunk& chunk, Node& expr) {
 	switch(expr.type) {
 	case NodeType::INT:
-		chunk.bytecode.push_back((uint8_t) Opcode::CONSTANT);
-		chunk.bytecode.push_back((uint8_t) chunk.constants->vec.size());
-		chunk.constants->vec.push_back(new ValueInt(static_cast<NodeInt&>(expr).val));
+		compileConstant(chunk, new ValueInt(static_cast<NodeInt&>(expr).val));
 		break;
-	case NodeType::UNI_OP: {
+	case NodeType::SYM: {
+		NodeSymbol& expr2 = static_cast<NodeSymbol&>(expr);
+		if(expr2.val == "nil") {
+			compileConstant(chunk, new Value(ValueType::NIL));
+		} else {
+			throw CompileError("Unexpected keyword in expression: " + expr2.val);
+		}
+		break;
+	} case NodeType::UNI_OP: {
 		NodeUnary& expr2 = static_cast<NodeUnary&>(expr);
 		compileExpression(chunk, *expr2.val);
 		if(expr2.op == "-") {
@@ -58,4 +64,10 @@ void Compiler::compileExpression(Chunk& chunk, Node& expr) {
 	} default:
 		throw CompileError("Expression type not implemented: " + nodeTypeDesc(expr.type));
 	}
+}
+
+void Compiler::compileConstant(Chunk& chunk, Value* val) {
+	chunk.bytecode.push_back((uint8_t) Opcode::CONSTANT);
+	chunk.bytecode.push_back((uint8_t) chunk.constants->vec.size());
+	chunk.constants->vec.push_back(val);
 }

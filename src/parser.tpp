@@ -65,7 +65,7 @@ std::unique_ptr<Node> Parser<C>::lexNewline() {
 }
 
 std::unordered_set<std::string> keywords = {
-	"let", "not", "and", "or"
+	"let", "not", "and", "or", "nil"
 };
 
 template <typename C>
@@ -274,6 +274,7 @@ bool Parser<C>::isCurSymbol(std::string sym) {
 }
 
 std::unordered_set<NodeType> terminals = { NodeType::ID, NodeType::INT, NodeType::REAL, NodeType::STR };
+std::unordered_set<std::string> terminalSymbols = { "nil" };
 std::unordered_set<std::string> prefixOperators = { "+", "-", "not" };
 std::unordered_set<std::string> infixOperators = { "+", "-", "*", "/", "^", "and", "or", "(" };
 std::unordered_set<std::string> rightAssociativeOperators = { "^" };
@@ -305,7 +306,9 @@ std::unique_ptr<Node> Parser<C>::parseExpr(int prec) {
 		exp = nextToken();
 	} else if(curToken->type == NodeType::SYM) {
 		std::unique_ptr<NodeSymbol> symbol(static_cast<NodeSymbol*>(nextToken().release()));
-		if(prefixOperators.find(symbol->val) != prefixOperators.end()) {
+		if(terminalSymbols.find(symbol->val) != terminalSymbols.end()) {
+			exp = std::move(symbol);
+		} else if(prefixOperators.find(symbol->val) != prefixOperators.end()) {
 			int prec2 = operatorPrecedence[symbol->val];
 			exp = std::unique_ptr<Node>(new NodeUnary(symbol->val, parseExpr(prec2)));
 		} else if(symbol->val == "(") {
