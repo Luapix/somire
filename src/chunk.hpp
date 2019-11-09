@@ -17,6 +17,8 @@ enum class Opcode : uint8_t {
 	BIN_PLUS
 };
 
+std::string opcodeDesc(Opcode opcode);
+
 std::array<uint8_t, 4> serializeUInt(uint32_t x);
 uint32_t parseUInt(std::array<uint8_t, 4> b);
 

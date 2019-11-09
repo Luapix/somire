@@ -1,18 +1,38 @@
 #include "value.hpp"
 
 #include <string>
+#include <sstream>
 
 ExecutionError::ExecutionError(const std::string& what)
 	: runtime_error("Execution error: " + what) { }
 
+std::string valueTypeDesc(ValueType type) {
+	switch(type) {
+	case ValueType::NIL: return "nil";
+	case ValueType::INT: return "int";
+	default:
+		throw std::runtime_error("Unknown type");
+	}
+}
+
 Value::Value(ValueType type) : type(type) {}
+
+Value* Value::negate() {
+	throw ExecutionError("Can't negate " + valueTypeDesc(type) + " value");
+}
+
+Value* Value::plus(Value& other) {
+	throw ExecutionError("Cannot add " + valueTypeDesc(type) + " value to anything");
+}
 
 std::string Value::toString() {
 	switch(type) {
 	case ValueType::NIL:
 		return "nil";
 	default:
-		throw ExecutionError("String representation not implemented for this type");
+		std::stringstream ss;
+		ss << "<" << valueTypeDesc(type) << " " << this << ">";
+		return ss.str();
 	}
 }
 
@@ -22,8 +42,10 @@ ValueInt* ValueInt::negate() {
 	return new ValueInt(-val);
 }
 
-ValueInt* ValueInt::plus(ValueInt& other) {
-	return new ValueInt(val + other.val);
+ValueInt* ValueInt::plus(Value& other) {
+	if(other.type != ValueType::INT)
+		throw ExecutionError("Cannot add int to " + valueTypeDesc(other.type) + " value");
+	return new ValueInt(val + static_cast<ValueInt&>(other).val);
 }
 
 std::string ValueInt::toString() {

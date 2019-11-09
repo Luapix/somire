@@ -27,27 +27,19 @@ void VM::run(Chunk& chunk) {
 			break;
 		} case Opcode::UNI_MINUS: {
 			GC::GCRoot<Value> val(pop());
-			if(val->type == ValueType::INT) {
-				stack->vec.push_back(static_cast<ValueInt&>(*val).negate());
-				std::cout << "Negated stack top; now equal to " << stack->vec.back()->toString() << std::endl;
-				pc++;
-			} else {
-				throw ExecutionError("Cannot negate value " + val->toString());
-			}
+			stack->vec.push_back(val->negate());
+			std::cout << "Negated stack top; now equal to " << stack->vec.back()->toString() << std::endl;
+			pc++;
 			break;
 		} case Opcode::BIN_PLUS: {
 			GC::GCRoot<Value> right(pop());
 			GC::GCRoot<Value> left(pop());
-			if(left->type == ValueType::INT && right->type == ValueType::INT) {
-				stack->vec.push_back(static_cast<ValueInt&>(*left).plus(static_cast<ValueInt&>(*right)));
-				std::cout << "Added top two stack values; top now equal to " << stack->vec.back()->toString() << std::endl;
-				pc++;
-			} else {
-				throw ExecutionError("Cannot add " + left->toString() + " and " + right->toString());
-			}
+			stack->vec.push_back(left->plus(*right));
+			std::cout << "Added top two stack values; top now equal to " << stack->vec.back()->toString() << std::endl;
+			pc++;
 			break;
 		} default:
-			throw ExecutionError("Opcode " + std::to_string((int) op) + " not yet implemented");
+			throw ExecutionError("Opcode " + opcodeDesc(op) + " not yet implemented");
 		}
 		GC::collect();
 		GC::logState();

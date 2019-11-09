@@ -15,12 +15,17 @@ enum class ValueType : uint8_t {
 	INT
 };
 
+std::string valueTypeDesc(ValueType type);
+
 class Value : public GC::GCObject {
 public:
 	const ValueType type;
 	
 	Value(ValueType type);
 	virtual ~Value() = default;
+	
+	virtual Value* negate();
+	virtual Value* plus(Value& other);
 	
 	virtual std::string toString();
 };
@@ -31,8 +36,8 @@ public:
 	
 	ValueInt(int32_t val);
 	
-	ValueInt* negate();
-	ValueInt* plus(ValueInt& other);
+	ValueInt* negate() override;
+	ValueInt* plus(Value& other) override;
 	
 	std::string toString() override;
 };

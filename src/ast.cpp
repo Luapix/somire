@@ -22,7 +22,7 @@ std::string nodeTypeDesc(NodeType type) {
 	case NodeType::EXPR_STAT: return "expression statement";
 	case NodeType::BLOCK: return "block";
 	default:
-		throw std::runtime_error("Unimplemented token type");
+		throw std::runtime_error("Unknown node type");
 	}
 }
 

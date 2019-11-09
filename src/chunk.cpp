@@ -2,6 +2,17 @@
 
 #include <stdexcept>
 
+std::string opcodeDesc(Opcode opcode) {
+	switch(opcode) {
+	case Opcode::NO_OP: return "NO_OP";
+	case Opcode::CONSTANT: return "CONSTANT";
+	case Opcode::UNI_MINUS: return "UNI_MINUS";
+	case Opcode::BIN_PLUS: return "BIN_PLUS";
+	default:
+		throw std::runtime_error("Unknown opcode");
+	}
+}
+
 std::array<uint8_t, 4> serializeUInt(uint32_t x) {
 	std::array<uint8_t, 4> res;
 	res[0] = x;
