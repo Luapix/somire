@@ -1,8 +1,9 @@
 
 CC     := g++
-CFLAGS := -std=c++11 -Wall -Wextra -pedantic -Ic:/lib/utf8-cpp-2.3.4
+CFLAGS := -O3 -MD -MP -std=c++11 -Wall -Wextra -pedantic -Wno-unused \
+	-Ic:/lib/utf8-cpp-2.3.4
 
-SRC_FILES := $(wildcard src/*.cpp)
+SRC_FILES := $(wildcard src/*.cpp) src/uni_data.cpp
 OBJ_FILES := $(patsubst src/%.cpp,build/%.o,$(SRC_FILES))
 OUTPUT := somire.exe
 
@@ -16,7 +17,8 @@ test: $(OUTPUT) input.txt
 	$(TIME_CMD) ./$(OUTPUT) run input.out
 
 clean:
-	rm -f build/*
+	rm -rf build
+	mkdir build
 	rm -f $(OUTPUT)
 
 debug: CFLAGS := -g $(CFLAGS)
@@ -25,7 +27,7 @@ debug: $(OUTPUT)
 debug-gc: CFLAGS := -DDEBUG_GC $(CFLAGS)
 debug-gc: $(OUTPUT)
 
-$(OBJ_FILES): build/%.o : src/%.cpp src/*.hpp src/*.tpp
+build/%.o: src/%.cpp src/*.hpp src/*.tpp
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OUTPUT): $(OBJ_FILES)
