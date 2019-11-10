@@ -2,20 +2,20 @@
 
 namespace GC {
 	template<typename T>
-	GCRoot<T>::GCRoot(T* obj) : obj(obj) {
+	Root<T>::Root(T* obj) : obj(obj) {
 		pin(obj);
 	}
 	
 	template<typename T>
-	GCRoot<T>::~GCRoot() {
+	Root<T>::~Root() {
 		unpin(obj);
 	}
 	
 	template<typename T>
-	T* GCRoot<T>::get() { return obj; }
+	T* Root<T>::get() { return obj; }
 	
 	template<typename T>
-	T& GCRoot<T>::operator*() { return *obj; }
+	T& Root<T>::operator*() { return *obj; }
 	template<typename T>
-	T* GCRoot<T>::operator->() { return obj; }
+	T* Root<T>::operator->() { return obj; }
 }

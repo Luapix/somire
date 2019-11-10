@@ -3,13 +3,7 @@
 #include <iostream>
 #include <string>
 
-VM::VM() : stack(new List()) {
-	GC::pin(stack);
-}
-
-VM::~VM() {
-	GC::unpin(stack);
-}
+VM::VM() : stack(new List()) {}
 
 void VM::run(Chunk& chunk) {
 	uint32_t pc = 0;

@@ -7,12 +7,11 @@
 class VM {
 public:
 	VM();
-	~VM();
 	
 	void run(Chunk& chunk);
 	
 private:
-	List* stack;
+	GC::Root<List> stack;
 	
 	Value pop();
 	void clearStack();

@@ -36,10 +36,10 @@ namespace GC {
 	};
 	
 	template<typename T>
-	class GCRoot {
+	class Root {
 	public:
-		GCRoot(T* obj);
-		~GCRoot();
+		Root(T* obj);
+		~Root();
 		
 		T* get();
 		
