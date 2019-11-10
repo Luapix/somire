@@ -72,6 +72,6 @@ void Compiler::compileExpression(Chunk& chunk, Node& expr) {
 
 void Compiler::compileConstant(Chunk& chunk, Value val) {
 	chunk.bytecode.push_back((uint8_t) Opcode::CONSTANT);
-	chunk.bytecode.push_back((uint8_t) chunk.constants->vec.size());
-	chunk.constants->vec.push_back(val);
+	chunk.bytecode.push_back((uint8_t) chunk.constants.size());
+	chunk.constants.push_back(val);
 }

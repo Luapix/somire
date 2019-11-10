@@ -48,28 +48,37 @@ int main(int argc, char const *argv[]) {
 				return 1;
 			}
 		}
-		std::string outputPath = inputPath.substr(0, inputPath.rfind('.')) + ".out";
 		{
 			std::cout << "Compiling..." << std::endl;
-			std::ofstream outputFile(outputPath, std::ios::binary);
+			
 			Compiler compiler;
 			std::unique_ptr<Chunk> chunk = compiler.compileChunk(std::move(program));
+			
+			std::string outputPath = inputPath.substr(0, inputPath.rfind('.')) + ".out";
+			std::ofstream outputFile(outputPath, std::ios::binary);
 			chunk->writeToFile(outputFile);
 		}
-		GC::collect();
 	} else if(op == "run") {
 		std::ifstream inputFile(inputPath, std::ios::binary);
 		if(!inputFile) {
 			std::cout << "Could not open bytecode file" << std::endl;
 			return 1;
 		}
+		
+		int status = 0;
 		{
 			std::unique_ptr<Chunk> chunk = Chunk::loadFromFile(inputFile);
 			VM vm;
-			vm.run(*chunk);
+			try {
+				vm.run(*chunk);
+			} catch(ExecutionError& e) {
+				std::cout << e.what() << std::endl;
+				status = 1;
+			}
 		}
 		GC::collect();
 		GC::logState();
+		return status;
 	} else {
 		std::cout << "Unknown operation: " << op << std::endl;
 		return 1;

@@ -6,7 +6,6 @@
 #include <unordered_map>
 
 #include "value.hpp"
-#include "gc.hpp"
 
 constexpr std::array<uint8_t, 8> magicBytes = { 'S','o','m','i','r','&', 0, 1 };
 
@@ -27,11 +26,9 @@ double parseReal(std::array<uint8_t, 8> b);
 
 class Chunk {
 public:
-	List* constants;
+	// the constant list only contains primitives, so no need for GC
+	std::vector<Value> constants;
 	std::vector<uint8_t> bytecode;
-	
-	Chunk();
-	~Chunk();
 	
 	template <typename O>
 	void writeToFile(O& output);
