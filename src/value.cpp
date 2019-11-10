@@ -3,6 +3,8 @@
 #include <string>
 #include <sstream>
 
+#include "fpconv.hpp"
+
 ExecutionError::ExecutionError(const std::string& what)
 	: runtime_error("Execution error: " + what) { }
 
@@ -66,5 +68,6 @@ Value* ValueReal::plus(Value& other) {
 }
 
 std::string ValueReal::toString() {
-	return std::to_string(val);
+	char buf[24];
+	return std::string(buf, fpconv_dtoa(val, buf));
 }
