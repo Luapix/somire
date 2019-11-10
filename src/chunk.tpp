@@ -64,6 +64,10 @@ void Chunk::writeConstantToFile(O& output, Value& val) {
 		std::array<uint8_t, 4> buf = serializeUInt((uint32_t) static_cast<ValueInt&>(val).val);
 		output.write((const char*) buf.data(), buf.size());
 		break;
+	} case ValueType::REAL: {
+		std::array<uint8_t, 8> buf = serializeReal(static_cast<ValueReal&>(val).val);
+		output.write((const char*) buf.data(), buf.size());
+		break;
 	} default:
 		throw std::runtime_error("Constant serialization is unimplemented for this type");
 	}
@@ -83,6 +87,12 @@ void Chunk::loadConstantFromFile(I& input) {
 		input.read((char*) buf.data(), buf.size());
 		int32_t val = (int32_t) parseUInt(buf);
 		constants->vec.push_back(new ValueInt(val));
+		break;
+	} case ValueType::REAL: {
+		std::array<uint8_t, 8> buf;
+		input.read((char*) buf.data(), buf.size());
+		double val = parseReal(buf);
+		constants->vec.push_back(new ValueReal(val));
 		break;
 	} default:
 		throw std::runtime_error("Constant unserialization is unimplemented for type " + std::to_string((int) type));

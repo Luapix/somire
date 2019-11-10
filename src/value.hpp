@@ -12,7 +12,8 @@ public:
 
 enum class ValueType : uint8_t {
 	NIL,
-	INT
+	INT,
+	REAL
 };
 
 std::string valueTypeDesc(ValueType type);
@@ -36,8 +37,20 @@ public:
 	
 	ValueInt(int32_t val);
 	
-	ValueInt* negate() override;
-	ValueInt* plus(Value& other) override;
+	Value* negate() override;
+	Value* plus(Value& other) override;
+	
+	std::string toString() override;
+};
+
+class ValueReal : public Value {
+public:
+	const double val;
+	
+	ValueReal(double val);
+	
+	Value* negate() override;
+	Value* plus(Value& other) override;
 	
 	std::string toString() override;
 };

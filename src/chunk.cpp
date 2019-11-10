@@ -15,16 +15,35 @@ std::string opcodeDesc(Opcode opcode) {
 
 std::array<uint8_t, 4> serializeUInt(uint32_t x) {
 	std::array<uint8_t, 4> res;
-	res[0] = x;
-	res[1] = x >> 8;
-	res[2] = x >> 16;
-	res[3] = x >> 24;
+	for(uint8_t i = 0; i < res.size(); i++) {
+		res[i] = x >> (i*8);
+	}
 	return res;
 }
 
 uint32_t parseUInt(std::array<uint8_t, 4> b) {
-	uint32_t u0 = b[0], u1 = b[1], u2 = b[2], u3 = b[3];
-    return u0 | (u1 << 8) | (u2 << 16) | (u3 << 24);
+	uint32_t x = 0;
+	for(uint8_t i = 0; i < b.size(); i++) {
+		x |= ((uint32_t) b[i]) << (i*8);
+	}
+	return x;
+}
+
+std::array<uint8_t, 8> serializeReal(double x) {
+	uint64_t& x2 = reinterpret_cast<uint64_t&>(x);
+	std::array<uint8_t, 8> res;
+	for(uint8_t i = 0; i < res.size(); i++) {
+		res[i] = x2 >> (i*8);
+	}
+	return res;
+}
+
+double parseReal(std::array<uint8_t, 8> b) {
+	uint64_t x2 = 0;
+	for(uint8_t i = 0; i < b.size(); i++) {
+		x2 |= ((uint64_t) b[i]) << (i*8);
+	}
+	return reinterpret_cast<double&>(x2);
 }
 
 Chunk::Chunk() : constants(new GC::GCVector<Value>()) {

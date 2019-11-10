@@ -22,6 +22,9 @@ std::string opcodeDesc(Opcode opcode);
 std::array<uint8_t, 4> serializeUInt(uint32_t x);
 uint32_t parseUInt(std::array<uint8_t, 4> b);
 
+std::array<uint8_t, 8> serializeReal(double x);
+double parseReal(std::array<uint8_t, 8> b);
+
 class Chunk {
 public:
 	GC::GCVector<Value>* constants;

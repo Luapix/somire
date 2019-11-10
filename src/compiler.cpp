@@ -35,6 +35,9 @@ void Compiler::compileExpression(Chunk& chunk, Node& expr) {
 	case NodeType::INT:
 		compileConstant(chunk, new ValueInt(static_cast<NodeInt&>(expr).val));
 		break;
+	case NodeType::REAL:
+		compileConstant(chunk, new ValueReal(static_cast<NodeReal&>(expr).val));
+		break;
 	case NodeType::SYM: {
 		NodeSymbol& expr2 = static_cast<NodeSymbol&>(expr);
 		if(expr2.val == "nil") {
