@@ -7,12 +7,12 @@ template <typename O>
 void Chunk::writeToFile(O& output) {
 	output.write((const char*) magicBytes.data(), magicBytes.size());
 	
-	if(constants.size() > 0xff)
+	if(constants->vec.size() > 0xff)
 		throw std::runtime_error("Too many constants in chunk");
-	uint8_t constantCnt = constants.size();
+	uint8_t constantCnt = constants->vec.size();
 	output.write((const char*) &constantCnt, sizeof(constantCnt));
 	
-	for(Value cnst : constants) {
+	for(Value cnst : constants->vec) {
 		writeConstantToFile(output, cnst);
 	}
 	
@@ -68,6 +68,12 @@ void Chunk::writeConstantToFile(O& output, Value val) {
 		std::array<uint8_t, 8> buf = serializeReal(val.getReal());
 		output.write((const char*) buf.data(), buf.size());
 		break;
+	} case ValueType::STR: {
+		std::string& str = static_cast<String&>(*val.getPointer()).str;
+		std::array<uint8_t, 4> buf = serializeUInt((uint32_t) str.size());
+		output.write((const char*) buf.data(), buf.size());
+		output.write((const char*) str.data(), str.size());
+		break;
 	} default:
 		throw std::runtime_error("Constant serialization is unimplemented for type " + valueTypeDesc(type));
 	}
@@ -80,19 +86,27 @@ void Chunk::loadConstantFromFile(I& input) {
 	
 	switch(type) {
 	case ValueType::NIL:
-		constants.push_back(Value::nil());
+		constants->vec.push_back(Value::nil());
 		break;
 	case ValueType::INT: {
 		std::array<uint8_t, 4> buf;
 		input.read((char*) buf.data(), buf.size());
 		int32_t val = (int32_t) parseUInt(buf);
-		constants.emplace_back(val);
+		constants->vec.emplace_back(val);
 		break;
 	} case ValueType::REAL: {
 		std::array<uint8_t, 8> buf;
 		input.read((char*) buf.data(), buf.size());
 		double val = parseReal(buf);
-		constants.emplace_back(val);
+		constants->vec.emplace_back(val);
+		break;
+	} case ValueType::STR: {
+		std::array<uint8_t, 4> buf;
+		input.read((char*) buf.data(), buf.size());
+		uint32_t len = parseUInt(buf);
+		std::string str(len, '\0');
+		input.read((char*) str.data(), len);
+		constants->vec.emplace_back(new String(str));
 		break;
 	} default:
 		throw std::runtime_error("Constant unserialization is unimplemented for type " + std::to_string((int) type));

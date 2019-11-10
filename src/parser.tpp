@@ -239,7 +239,7 @@ std::unique_ptr<Node> Parser<C>::lexToken() {
 		token = lexNumber();
 	else if(isIdStart(curChar))
 		token = lexId();
-	else if(curChar == '\'')
+	else if(curChar == '\'' || curChar == '"')
 		token = lexString();
 	else if(curChar == '\n')
 		token = lexNewline();

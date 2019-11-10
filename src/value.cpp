@@ -14,6 +14,7 @@ std::string valueTypeDesc(ValueType type) {
 	case ValueType::INT: return "int";
 	case ValueType::REAL: return "real";
 	case ValueType::LIST: return "list";
+	case ValueType::STR: return "string";
 	default:
 		throw std::runtime_error("Unknown type");
 	}
@@ -135,3 +136,6 @@ void List::markChildren() {
 		val.mark();
 	}
 }
+
+
+String::String(std::string str) : Object(ValueType::STR), str(str) {}

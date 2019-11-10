@@ -38,6 +38,9 @@ void Compiler::compileExpression(Chunk& chunk, Node& expr) {
 	case NodeType::REAL:
 		compileConstant(chunk, Value(static_cast<NodeReal&>(expr).val));
 		break;
+	case NodeType::STR:
+		compileConstant(chunk, Value(new String(static_cast<NodeString&>(expr).val)));
+		break;
 	case NodeType::SYM: {
 		NodeSymbol& expr2 = static_cast<NodeSymbol&>(expr);
 		if(expr2.val == "nil") {
@@ -72,6 +75,6 @@ void Compiler::compileExpression(Chunk& chunk, Node& expr) {
 
 void Compiler::compileConstant(Chunk& chunk, Value val) {
 	chunk.bytecode.push_back((uint8_t) Opcode::CONSTANT);
-	chunk.bytecode.push_back((uint8_t) chunk.constants.size());
-	chunk.constants.push_back(val);
+	chunk.bytecode.push_back((uint8_t) chunk.constants->vec.size());
+	chunk.constants->vec.push_back(val);
 }

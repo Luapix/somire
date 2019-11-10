@@ -16,7 +16,7 @@ void VM::run(Chunk& chunk) {
 			break;
 		case Opcode::CONSTANT: {
 			uint8_t constantIdx = chunk.bytecode[pc+1];
-			stack->vec.push_back(chunk.constants.at(constantIdx));
+			stack->vec.push_back(chunk.constants->vec.at(constantIdx));
 			std::cout << "Loaded constant n°" << (int) constantIdx << " = " << stack->vec.back().toString() << std::endl;
 			pc += 2;
 			break;

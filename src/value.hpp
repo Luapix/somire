@@ -14,7 +14,8 @@ enum class ValueType : uint8_t {
 	NIL,
 	INT,
 	REAL,
-	LIST
+	LIST,
+	STR
 };
 
 std::string valueTypeDesc(ValueType type);
@@ -81,4 +82,11 @@ public:
 	List();
 	
 	void markChildren() override;
+};
+
+class String : public Object {
+public:
+	std::string str;
+	
+	String(std::string str);
 };
