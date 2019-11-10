@@ -13,44 +13,72 @@ public:
 enum class ValueType : uint8_t {
 	NIL,
 	INT,
-	REAL
+	REAL,
+	LIST
 };
 
 std::string valueTypeDesc(ValueType type);
 
-class Value : public GC::GCObject {
+
+class Object;
+
+class Value {
+public:
+	Value(int32_t integer);
+	Value(double real);
+	Value(Object* obj);
+	
+	static Value nil();
+	
+	void mark();
+	
+	ValueType type();
+	
+	bool isNil();
+	bool isInt();
+	bool isDouble();
+	bool isPointer();
+	
+	int32_t getInt();
+	double getReal();
+	Object* getPointer();
+	
+	Value negate();
+	Value plus(Value other);
+	
+	std::string toString();
+	
+private:
+	Value() = default;
+	
+	union {
+		double asDouble;
+		uint64_t asBits;
+	};
+	
+	static const uint64_t POINTER_TAG = 0xfff8000000000000;
+	static const uint64_t INT_TAG     = 0xfff9000000000000;
+	static const uint64_t NIL         = 0xfffa000000000000;
+};
+
+class Object : public GC::GCObject {
 public:
 	const ValueType type;
 	
-	Value(ValueType type);
-	virtual ~Value() = default;
+	Object(ValueType type);
+	virtual ~Object() = default;
 	
-	virtual Value* negate();
-	virtual Value* plus(Value& other);
+	virtual Value negate();
+	virtual Value plus(Value other);
 	
 	virtual std::string toString();
 };
 
-class ValueInt : public Value {
+class List : public Object {
 public:
-	const int32_t val;
+	std::vector<Value> vec;
 	
-	ValueInt(int32_t val);
+	List();
 	
-	Value* negate() override;
-	Value* plus(Value& other) override;
-	
-	std::string toString() override;
-};
-
-class ValueReal : public Value {
-public:
-	const double val;
-	
-	ValueReal(double val);
-	
-	Value* negate() override;
-	Value* plus(Value& other) override;
-	
-	std::string toString() override;
+	void markChildren() override;
 };

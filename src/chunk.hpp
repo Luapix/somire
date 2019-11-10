@@ -27,7 +27,7 @@ double parseReal(std::array<uint8_t, 8> b);
 
 class Chunk {
 public:
-	GC::GCVector<Value>* constants;
+	List* constants;
 	std::vector<uint8_t> bytecode;
 	
 	Chunk();
@@ -41,7 +41,7 @@ public:
 	
 private:
 	template <typename O>
-	void writeConstantToFile(O& output, Value& val);
+	void writeConstantToFile(O& output, Value val);
 	
 	template <typename I>
 	void loadConstantFromFile(I& input);

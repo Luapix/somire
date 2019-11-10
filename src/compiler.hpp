@@ -21,5 +21,5 @@ private:
 	void compileBlock(Chunk& chunk, NodeBlock& block);
 	void compileStatement(Chunk& chunk, Node& stat);
 	void compileExpression(Chunk& chunk, Node& expr);
-	void compileConstant(Chunk& chunk, Value* val);
+	void compileConstant(Chunk& chunk, Value val);
 };

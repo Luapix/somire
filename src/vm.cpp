@@ -3,7 +3,7 @@
 #include <iostream>
 #include <string>
 
-VM::VM() : stack(new GC::GCVector<Value>()) {
+VM::VM() : stack(new List()) {
 	GC::pin(stack);
 }
 
@@ -23,20 +23,20 @@ void VM::run(Chunk& chunk) {
 		case Opcode::CONSTANT: {
 			uint8_t constantIdx = chunk.bytecode[pc+1];
 			stack->vec.push_back(chunk.constants->vec.at(constantIdx)); // Constants can only be used once for now...
-			std::cout << "Loaded constant n°" << (int) constantIdx << " = " << stack->vec.back()->toString() << std::endl;
+			std::cout << "Loaded constant n°" << (int) constantIdx << " = " << stack->vec.back().toString() << std::endl;
 			pc += 2;
 			break;
 		} case Opcode::UNI_MINUS: {
-			GC::GCRoot<Value> val(pop());
-			stack->vec.push_back(val->negate());
-			std::cout << "Negated stack top; now equal to " << stack->vec.back()->toString() << std::endl;
+			Value val = pop();
+			stack->vec.push_back(val.negate());
+			std::cout << "Negated stack top; now equal to " << stack->vec.back().toString() << std::endl;
 			pc++;
 			break;
 		} case Opcode::BIN_PLUS: {
-			GC::GCRoot<Value> right(pop());
-			GC::GCRoot<Value> left(pop());
-			stack->vec.push_back(left->plus(*right));
-			std::cout << "Added top two stack values; top now equal to " << stack->vec.back()->toString() << std::endl;
+			Value right = pop();
+			Value left = pop();
+			stack->vec.push_back(left.plus(right));
+			std::cout << "Added top two stack values; top now equal to " << stack->vec.back().toString() << std::endl;
 			pc++;
 			break;
 		} default:
@@ -47,10 +47,10 @@ void VM::run(Chunk& chunk) {
 	}
 }
 
-Value* VM::pop() {
+Value VM::pop() {
 	if(stack->vec.empty())
 		throw ExecutionError("Expected operand, stack empty");
-	Value* val = stack->vec.back();
+	Value val = stack->vec.back();
 	stack->vec.pop_back();
 	return val;
 }

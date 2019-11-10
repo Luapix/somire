@@ -12,8 +12,8 @@ public:
 	void run(Chunk& chunk);
 	
 private:
-	GC::GCVector<Value>* stack;
+	List* stack;
 	
-	Value* pop();
+	Value pop();
 	void clearStack();
 };

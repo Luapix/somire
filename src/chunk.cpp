@@ -46,7 +46,7 @@ double parseReal(std::array<uint8_t, 8> b) {
 	return reinterpret_cast<double&>(x2);
 }
 
-Chunk::Chunk() : constants(new GC::GCVector<Value>()) {
+Chunk::Chunk() : constants(new List()) {
 	GC::pin(constants);
 }
 

@@ -33,15 +33,15 @@ void Compiler::compileStatement(Chunk& chunk, Node& stat) {
 void Compiler::compileExpression(Chunk& chunk, Node& expr) {
 	switch(expr.type) {
 	case NodeType::INT:
-		compileConstant(chunk, new ValueInt(static_cast<NodeInt&>(expr).val));
+		compileConstant(chunk, Value(static_cast<NodeInt&>(expr).val));
 		break;
 	case NodeType::REAL:
-		compileConstant(chunk, new ValueReal(static_cast<NodeReal&>(expr).val));
+		compileConstant(chunk, Value(static_cast<NodeReal&>(expr).val));
 		break;
 	case NodeType::SYM: {
 		NodeSymbol& expr2 = static_cast<NodeSymbol&>(expr);
 		if(expr2.val == "nil") {
-			compileConstant(chunk, new Value(ValueType::NIL));
+			compileConstant(chunk, Value::nil());
 		} else {
 			throw CompileError("Unexpected keyword in expression: " + expr2.val);
 		}
@@ -70,7 +70,7 @@ void Compiler::compileExpression(Chunk& chunk, Node& expr) {
 	}
 }
 
-void Compiler::compileConstant(Chunk& chunk, Value* val) {
+void Compiler::compileConstant(Chunk& chunk, Value val) {
 	chunk.bytecode.push_back((uint8_t) Opcode::CONSTANT);
 	chunk.bytecode.push_back((uint8_t) chunk.constants->vec.size());
 	chunk.constants->vec.push_back(val);

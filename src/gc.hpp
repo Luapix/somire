@@ -49,14 +49,6 @@ namespace GC {
 	private:
 		T* obj;
 	};
-	
-	template<typename T>
-	class GCVector : public GCObject {
-	public:
-		std::vector<T*> vec;
-		
-		void markChildren() override;
-	};
 }
 
 #include "gc.tpp"

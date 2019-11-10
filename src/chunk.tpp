@@ -12,8 +12,8 @@ void Chunk::writeToFile(O& output) {
 	uint8_t constantCnt = constants->vec.size();
 	output.write((const char*) &constantCnt, sizeof(constantCnt));
 	
-	for(Value* cnst : constants->vec) {
-		writeConstantToFile(output, *cnst);
+	for(Value cnst : constants->vec) {
+		writeConstantToFile(output, cnst);
 	}
 	
 	output.write((const char*) bytecode.data(), bytecode.size());
@@ -53,23 +53,23 @@ std::unique_ptr<Chunk> Chunk::loadFromFile(I& input) {
 }
 
 template <typename O>
-void Chunk::writeConstantToFile(O& output, Value& val) {
-	ValueType type = val.type;
+void Chunk::writeConstantToFile(O& output, Value val) {
+	ValueType type = val.type();
 	output.write((const char*) &type, sizeof(ValueType));
 	
 	switch(type) {
 	case ValueType::NIL:
 		break;
 	case ValueType::INT: {
-		std::array<uint8_t, 4> buf = serializeUInt((uint32_t) static_cast<ValueInt&>(val).val);
+		std::array<uint8_t, 4> buf = serializeUInt((uint32_t) val.getInt());
 		output.write((const char*) buf.data(), buf.size());
 		break;
 	} case ValueType::REAL: {
-		std::array<uint8_t, 8> buf = serializeReal(static_cast<ValueReal&>(val).val);
+		std::array<uint8_t, 8> buf = serializeReal(val.getReal());
 		output.write((const char*) buf.data(), buf.size());
 		break;
 	} default:
-		throw std::runtime_error("Constant serialization is unimplemented for this type");
+		throw std::runtime_error("Constant serialization is unimplemented for type " + valueTypeDesc(type));
 	}
 }
 
@@ -80,19 +80,19 @@ void Chunk::loadConstantFromFile(I& input) {
 	
 	switch(type) {
 	case ValueType::NIL:
-		constants->vec.push_back(new Value(type));
+		constants->vec.push_back(Value::nil());
 		break;
 	case ValueType::INT: {
 		std::array<uint8_t, 4> buf;
 		input.read((char*) buf.data(), buf.size());
 		int32_t val = (int32_t) parseUInt(buf);
-		constants->vec.push_back(new ValueInt(val));
+		constants->vec.emplace_back(val);
 		break;
 	} case ValueType::REAL: {
 		std::array<uint8_t, 8> buf;
 		input.read((char*) buf.data(), buf.size());
 		double val = parseReal(buf);
-		constants->vec.push_back(new ValueReal(val));
+		constants->vec.emplace_back(val);
 		break;
 	} default:
 		throw std::runtime_error("Constant unserialization is unimplemented for type " + std::to_string((int) type));

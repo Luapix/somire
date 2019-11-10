@@ -18,11 +18,4 @@ namespace GC {
 	T& GCRoot<T>::operator*() { return *obj; }
 	template<typename T>
 	T* GCRoot<T>::operator->() { return obj; }
-	
-	template<typename T>
-	void GCVector<T>::markChildren() {
-		for(T* obj : vec) {
-			obj->mark();
-		}
-	}
 }
