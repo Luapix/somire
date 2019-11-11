@@ -103,6 +103,8 @@ void Compiler::compileExpression(Chunk& chunk, Node& expr) {
 			chunk.bytecode.push_back((uint8_t) Opcode::AND);
 		} else if(expr2.op == "or") {
 			chunk.bytecode.push_back((uint8_t) Opcode::OR);
+		} else if(expr2.op == "==") {
+			chunk.bytecode.push_back((uint8_t) Opcode::EQUALS);
 		} else {
 			throw CompileError("Unknown binary operator: " + expr2.op);
 		}

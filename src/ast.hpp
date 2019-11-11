@@ -6,12 +6,8 @@
 #include <cstdint>
 #include <cstdio>
 #include <cassert>
-#include <sstream>
-#include <iomanip>
 #include <memory>
 #include <vector>
-
-#include "uni_util.hpp"
 
 class ParseError : public std::runtime_error {
 public:

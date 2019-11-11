@@ -14,6 +14,7 @@ std::unordered_map<Opcode, std::string> opcodeDescTable = {
 	{Opcode::NOT, "NOT"},
 	{Opcode::AND, "AND"},
 	{Opcode::OR, "OR"},
+	{Opcode::EQUALS, "EQUALS"}
 };
 
 std::string opcodeDesc(Opcode opcode) {

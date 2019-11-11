@@ -41,7 +41,7 @@ public:
 	bool isNil();
 	bool isBool();
 	bool isInt();
-	bool isDouble();
+	bool isReal();
 	bool isPointer();
 	
 	bool getBool();
@@ -51,6 +51,8 @@ public:
 	
 	Value negate();
 	Value plus(Value other);
+	
+	bool equals(Value other);
 	
 	std::string toString();
 	
@@ -77,6 +79,8 @@ public:
 	virtual Value negate();
 	virtual Value plus(Value other);
 	
+	virtual bool equals(Object& obj);
+	
 	virtual std::string toString();
 };
 
@@ -94,4 +98,8 @@ public:
 	std::string str;
 	
 	String(std::string str);
+	
+	bool equals(Object& obj) override;
+	
+	std::string toString() override;
 };

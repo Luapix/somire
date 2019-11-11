@@ -277,16 +277,17 @@ bool Parser<C>::isCurSymbol(std::string sym) {
 std::unordered_set<NodeType> terminals = { NodeType::ID, NodeType::INT, NodeType::REAL, NodeType::STR };
 std::unordered_set<std::string> terminalSymbols = { "nil", "true", "false" };
 std::unordered_set<std::string> prefixOperators = { "+", "-", "not" };
-std::unordered_set<std::string> infixOperators = { "+", "-", "*", "/", "^", "and", "or", "(" };
+std::unordered_set<std::string> infixOperators = { "+", "-", "*", "/", "^", "and", "or", "(", "==" };
 std::unordered_set<std::string> rightAssociativeOperators = { "^" };
 
 std::unordered_map<std::string, int> operatorPrecedence = {
 	{"and", 2}, {"or", 2},
 	{"not", 4},
-	{"+", 6}, {"-", 6},
-	{"*", 8}, {"/", 8},
-	{"^", 10},
-	{"(", 12}
+	{"==", 6},
+	{"+", 8}, {"-", 8},
+	{"*", 10}, {"/", 10},
+	{"^", 12},
+	{"(", 14}
 };
 
 template <typename C>

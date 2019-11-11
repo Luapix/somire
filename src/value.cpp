@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include "fpconv.hpp"
+#include "util.hpp"
 
 ExecutionError::ExecutionError(const std::string& what)
 	: runtime_error("Execution error: " + what) { }
@@ -54,7 +55,7 @@ ValueType Value::type() {
 	if(isNil()) return ValueType::NIL;
 	else if(isBool()) return ValueType::BOOL;
 	else if(isInt()) return ValueType::INT;
-	else if(isDouble()) return ValueType::REAL;
+	else if(isReal()) return ValueType::REAL;
 	else if(isPointer()) return getPointer()->type;
 	else throw std::runtime_error("Invalid value");
 }
@@ -62,7 +63,7 @@ ValueType Value::type() {
 bool Value::isNil() { return asBits == NIL; }
 bool Value::isBool() { return (asBits & TAG_MASK) == BOOL_TAG; }
 bool Value::isInt() { return (asBits & TAG_MASK) == INT_TAG; }
-bool Value::isDouble() { return asBits <= POINTER_TAG; }
+bool Value::isReal() { return asBits <= POINTER_TAG; }
 bool Value::isPointer() { return (asBits & TAG_MASK) == POINTER_TAG && asBits != POINTER_TAG; }
 
 bool Value::getBool() { return (bool) (asBits & 0x1); }
@@ -72,7 +73,7 @@ Object* Value::getPointer() { return reinterpret_cast<Object*>(asBits & 0xffffff
 
 Value Value::negate() {
 	if(isInt()) return Value(-getInt());
-	else if(isDouble()) return Value(-asDouble);
+	else if(isReal()) return Value(-asDouble);
 	else if(isPointer()) return getPointer()->negate();
 	else throw ExecutionError("Cannot negate " + valueTypeDesc(type()) + " value");
 }
@@ -83,8 +84,8 @@ Value Value::plus(Value other) {
 			return Value(getInt() + other.getInt());
 		else
 			throw ExecutionError("Cannot add int to " + valueTypeDesc(other.type()) + " value");
-	} else if(isDouble()) {
-		if(other.isDouble())
+	} else if(isReal()) {
+		if(other.isReal())
 			return Value(asDouble + other.asDouble);
 		else
 			throw ExecutionError("Cannot add real to " + valueTypeDesc(other.type()) + " value");
@@ -95,6 +96,16 @@ Value Value::plus(Value other) {
 	}
 }
 
+bool Value::equals(Value other) {
+	if(type() != other.type()) return false;
+	if(isNil()) return true;
+	else if(isBool()) return getBool() == other.getBool();
+	else if(isInt()) return getInt() == other.getInt();
+	else if(isReal()) return getReal() == other.getReal();
+	else if(isPointer()) return getPointer()->equals(*other.getPointer());
+	else throw std::runtime_error("Invalid value");
+}
+
 std::string Value::toString() {
 	if(isNil()) {
 		return "nil";
@@ -102,7 +113,7 @@ std::string Value::toString() {
 		return getBool() ? "true" : "false";
 	} else if(isInt()) {
 		return std::to_string(getInt());
-	} else if(isDouble()) {
+	} else if(isReal()) {
 		char buf[24];
 		return std::string(buf, fpconv_dtoa(asDouble, buf));
 	} else if(isPointer()) {
@@ -123,6 +134,10 @@ Value Object::plus(Value other) {
 	throw ExecutionError("Cannot add " + valueTypeDesc(type) + " value to anything");
 }
 
+bool Object::equals(Object& obj) {
+	return this == &obj;
+}
+
 std::string Object::toString() {
 	std::stringstream ss;
 	ss << "<" << valueTypeDesc(type) << " " << this << ">";
@@ -140,3 +155,11 @@ void List::markChildren() {
 
 
 String::String(std::string str) : Object(ValueType::STR), str(str) {}
+
+bool String::equals(Object& obj) {
+	return str == static_cast<String&>(obj).str;
+}
+
+std::string String::toString() {
+	return escapeString(str);
+}

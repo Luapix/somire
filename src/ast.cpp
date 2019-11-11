@@ -1,6 +1,6 @@
 #include "ast.hpp"
 
-#include "utf8.h"
+#include "util.hpp"
 
 ParseError::ParseError(const std::string& what)
 	: runtime_error("Parse error: " + what) { }
@@ -72,32 +72,7 @@ std::string NodeReal::getDataDesc() {
 NodeString::NodeString(std::string val) : Node(NodeType::STR), val(val) {}
 
 std::string NodeString::getDataDesc() {
-	std::string res;
-	auto outIt = std::back_inserter(res);
-	auto inIt = val.begin();
-	auto inEnd = val.end();
-	while(inIt != inEnd) {
-		uni_cp cp = utf8::next(inIt, inEnd);
-		switch(cp) {
-		case '\n': res += "\\n"; break;
-		case '\r': res += "\\r"; break;
-		case '\t': res += "\\t"; break;
-		case '\\':
-		case '\'':
-			res += "\\" + strFromCP(cp);
-			break;
-		default:
-			if(isGraphic(cp)) {
-				utf8::append(cp, outIt);
-			} else {
-				std::stringstream code;
-				code << "\\" << (cp <= 0xffff ? "u" : "U")
-					<< std::setfill('0') << std::setw(cp <= 0xffff ? 4 : 6) << std::hex << cp;
-				res += code.str();
-			}
-		}
-	}
-	return " '" + res + "'";
+	return " " + escapeString(val);
 }
 
 NodeSymbol::NodeSymbol(std::string val) : Node(NodeType::SYM), val(val) {}

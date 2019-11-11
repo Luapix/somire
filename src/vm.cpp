@@ -53,6 +53,12 @@ void VM::run(Chunk& chunk) {
 			stack->vec.emplace_back(left.getBool() || right.getBool());
 			pc++;
 			break;
+		} case Opcode::EQUALS: {
+			Value right = pop();
+			Value left = pop();
+			stack->vec.emplace_back(left.equals(right));
+			pc++;
+			break;
 		} case Opcode::LET: {
 			localCnt++;
 			//std::cout << "Set local n°" << localCnt-1 << " to " << stack->vec.back().toString() << std::endl;
