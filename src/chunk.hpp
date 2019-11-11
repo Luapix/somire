@@ -18,7 +18,8 @@ enum class Opcode : uint8_t {
 	LET,
 	SET,
 	LOCAL,
-	LOG
+	LOG,
+	NOT, OR, AND
 };
 
 std::string opcodeDesc(Opcode opcode);

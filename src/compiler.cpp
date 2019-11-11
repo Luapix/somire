@@ -87,6 +87,8 @@ void Compiler::compileExpression(Chunk& chunk, Node& expr) {
 		compileExpression(chunk, *expr2.val);
 		if(expr2.op == "-") {
 			chunk.bytecode.push_back((uint8_t) Opcode::UNI_MINUS);
+		} else if(expr2.op == "not") {
+			chunk.bytecode.push_back((uint8_t) Opcode::NOT);
 		} else {
 			throw CompileError("Unknown unary operator: " + expr2.op);
 		}
@@ -97,6 +99,10 @@ void Compiler::compileExpression(Chunk& chunk, Node& expr) {
 		compileExpression(chunk, *expr2.right);
 		if(expr2.op == "+") {
 			chunk.bytecode.push_back((uint8_t) Opcode::BIN_PLUS);
+		} else if(expr2.op == "and") {
+			chunk.bytecode.push_back((uint8_t) Opcode::AND);
+		} else if(expr2.op == "or") {
+			chunk.bytecode.push_back((uint8_t) Opcode::OR);
 		} else {
 			throw CompileError("Unknown binary operator: " + expr2.op);
 		}

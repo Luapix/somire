@@ -33,6 +33,26 @@ void VM::run(Chunk& chunk) {
 			//std::cout << "Added top two stack values; top now equal to " << stack->vec.back().toString() << std::endl;
 			pc++;
 			break;
+		} case Opcode::NOT: {
+			Value val = pop();
+			if(!val.isBool()) throw ExecutionError("Cannot 'not' non-boolean value " + val.toString());
+			stack->vec.emplace_back(!val.getBool());
+			pc++;
+			break;
+		} case Opcode::AND: {
+			Value right = pop();
+			Value left = pop();
+			if(!left.isBool() || !right.isBool()) throw ExecutionError("Cannot 'and' " + left.toString() + " and " + right.toString());
+			stack->vec.emplace_back(left.getBool() && right.getBool());
+			pc++;
+			break;
+		} case Opcode::OR: {
+			Value right = pop();
+			Value left = pop();
+			if(!left.isBool() || !right.isBool()) throw ExecutionError("Cannot 'or' " + left.toString() + " and " + right.toString());
+			stack->vec.emplace_back(left.getBool() || right.getBool());
+			pc++;
+			break;
 		} case Opcode::LET: {
 			localCnt++;
 			//std::cout << "Set local n°" << localCnt-1 << " to " << stack->vec.back().toString() << std::endl;

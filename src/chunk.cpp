@@ -2,19 +2,25 @@
 
 #include <stdexcept>
 
+std::unordered_map<Opcode, std::string> opcodeDescTable = {
+	{Opcode::IGNORE, "IGNORE"},
+	{Opcode::CONSTANT, "CONSTANT"},
+	{Opcode::UNI_MINUS, "UNI_MINUS"},
+	{Opcode::BIN_PLUS, "BIN_PLUS"},
+	{Opcode::LET, "LET"},
+	{Opcode::SET, "SET"},
+	{Opcode::LOCAL, "LOCAL"},
+	{Opcode::LOG, "LOG"},
+	{Opcode::NOT, "NOT"},
+	{Opcode::AND, "AND"},
+	{Opcode::OR, "OR"},
+};
+
 std::string opcodeDesc(Opcode opcode) {
-	switch(opcode) {
-	case Opcode::IGNORE: return "IGNORE";
-	case Opcode::CONSTANT: return "CONSTANT";
-	case Opcode::UNI_MINUS: return "UNI_MINUS";
-	case Opcode::BIN_PLUS: return "BIN_PLUS";
-	case Opcode::LET: return "LET";
-	case Opcode::SET: return "SET";
-	case Opcode::LOCAL: return "LOCAL";
-	case Opcode::LOG: return "LOG";
-	default:
+	auto it = opcodeDescTable.find(opcode);
+	if(it == opcodeDescTable.end())
 		throw std::runtime_error("Unknown opcode");
-	}
+	return it->second;
 }
 
 std::array<uint8_t, 4> serializeUInt(uint32_t x) {
