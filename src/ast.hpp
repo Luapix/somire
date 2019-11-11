@@ -20,7 +20,7 @@ enum class NodeType {
 	ID, INT, REAL, STR,
 	SYM,
 	UNI_OP, BIN_OP,
-	LET, SET, EXPR_STAT, LOG,
+	LET, SET, EXPR_STAT, LOG, IF,
 	BLOCK
 };
 
@@ -33,10 +33,10 @@ public:
 	Node(NodeType type);
 	virtual ~Node() = default;
 	
-	std::string toString();
+	virtual std::string toString(std::string prefix = "");
 	
 protected:
-	virtual std::string getDataDesc();
+	virtual std::string getDataDesc(std::string prefix);
 };
 
 class NodeId : public Node {
@@ -46,7 +46,7 @@ public:
 	const std::string val;
 	
 protected:
-	std::string getDataDesc() override;
+	std::string getDataDesc(std::string prefix) override;
 };
 
 class NodeInt : public Node {
@@ -56,7 +56,7 @@ public:
 	const std::int32_t val;
 	
 protected:
-	std::string getDataDesc() override;
+	std::string getDataDesc(std::string prefix) override;
 };
 
 class NodeReal : public Node {
@@ -66,7 +66,7 @@ public:
 	const double val;
 	
 protected:
-	std::string getDataDesc() override;
+	std::string getDataDesc(std::string prefix) override;
 };
 
 class NodeString : public Node {
@@ -76,7 +76,7 @@ public:
 	const std::string val;
 	
 protected:
-	std::string getDataDesc() override;
+	std::string getDataDesc(std::string prefix) override;
 };
 
 class NodeSymbol : public Node {
@@ -86,7 +86,7 @@ public:
 	const std::string val;
 	
 protected:
-	std::string getDataDesc() override;
+	std::string getDataDesc(std::string prefix) override;
 };
 
 class NodeUnary : public Node {
@@ -97,7 +97,7 @@ public:
 	const std::unique_ptr<Node> val;
 	
 protected:
-	std::string getDataDesc() override;
+	std::string getDataDesc(std::string prefix) override;
 };
 
 class NodeBinary : public Node {
@@ -108,7 +108,7 @@ public:
 	const std::unique_ptr<Node> left, right;
 	
 protected:
-	std::string getDataDesc() override;
+	std::string getDataDesc(std::string prefix) override;
 };
 
 class NodeLet : public Node {
@@ -119,7 +119,7 @@ public:
 	const std::unique_ptr<Node> exp;
 	
 protected:
-	std::string getDataDesc() override;
+	std::string getDataDesc(std::string prefix) override;
 };
 
 class NodeSet : public Node {
@@ -130,7 +130,7 @@ public:
 	const std::unique_ptr<Node> exp;
 	
 protected:
-	std::string getDataDesc() override;
+	std::string getDataDesc(std::string prefix) override;
 };
 
 class NodeExprStat : public Node {
@@ -140,7 +140,7 @@ public:
 	const std::unique_ptr<Node> exp;
 	
 protected:
-	std::string getDataDesc() override;
+	std::string getDataDesc(std::string prefix) override;
 };
 
 class NodeLog : public Node {
@@ -150,7 +150,18 @@ public:
 	const std::unique_ptr<Node> exp;
 
 protected:
-	std::string getDataDesc() override;
+	std::string getDataDesc(std::string prefix) override;
+};
+
+class NodeIf : public Node {
+public:
+	NodeIf(std::unique_ptr<Node> cond, std::unique_ptr<Node> block);
+	
+	const std::unique_ptr<Node> cond;
+	const std::unique_ptr<Node> block;
+	
+protected:
+	std::string getDataDesc(std::string prefix) override;
 };
 
 class NodeBlock : public Node {
@@ -160,7 +171,7 @@ public:
 	const std::vector<std::unique_ptr<Node>> statements;
 	
 protected:
-	std::string getDataDesc() override;
+	std::string getDataDesc(std::string prefix) override;
 };
 
 #endif

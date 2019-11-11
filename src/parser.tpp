@@ -65,7 +65,9 @@ std::unique_ptr<Node> Parser<C>::lexNewline() {
 }
 
 std::unordered_set<std::string> keywords = {
-	"let", "not", "and", "or", "nil", "log", "true", "false"
+	"log", "let", "if",
+	"not", "and", "or",
+	"nil", "true", "false"
 };
 
 template <typename C>
@@ -205,7 +207,7 @@ std::unique_ptr<Node> Parser<C>::lexString() {
 }
 
 std::unordered_set<uni_cp> symbolChars = {
-	'=', ',', '(', ')',
+	'=', ',', '(', ')', ':',
 	'+', '-', '*', '/', '^',
 };
 
@@ -374,21 +376,36 @@ std::unique_ptr<Node> Parser<C>::parseStatement() {
 		nextToken();
 		std::unique_ptr<Node> expr = parseExpr();
 		return std::unique_ptr<Node>(new NodeSet(id, std::move(expr)));
+	} else if(isCurSymbol("if")) {
+		nextToken();
+		std::unique_ptr<Node> cond = parseExpr();
+		if(!isCurSymbol(":"))
+			error("Expected ':' after 'if' + condition, got " + curToken->toString());
+		nextToken();
+		discardToken(NodeType::INDENT);
+		std::unique_ptr<Node> block = parseBlock();
+		return std::unique_ptr<Node>(new NodeIf(std::move(cond), std::move(block)));
 	} else {
 		return std::unique_ptr<Node>(new NodeExprStat(parseExpr()));
 	}
 }
 
 template <typename C>
-std::unique_ptr<NodeBlock> Parser<C>::parseProgram() {
+std::unique_ptr<Node> Parser<C>::parseBlock() {
 	std::vector<std::unique_ptr<Node>> statements;
-	while(curToken->type != NodeType::EOI) {
-		discardToken(NodeType::NL);
-		while(curToken->type == NodeType::NL) nextToken();
-		if(curToken->type == NodeType::EOI) break;
+	while(true) {
 		statements.push_back(parseStatement());
+		if(curToken->type == NodeType::DEDENT || curToken->type == NodeType::EOI) break;
+		discardToken(NodeType::NL);
+		if(curToken->type == NodeType::EOI) break;
 	}
 	return std::unique_ptr<NodeBlock>(new NodeBlock(std::move(statements)));
+}
+
+template <typename C>
+std::unique_ptr<Node> Parser<C>::parseProgram() {
+	discardToken(NodeType::NL);
+	return parseBlock();
 }
 
 

@@ -28,7 +28,7 @@ class Parser {
 public:
 	Parser(C start, C end);
 	
-	std::unique_ptr<NodeBlock> parseProgram();
+	std::unique_ptr<Node> parseProgram();
 	
 private:
 	C curByte;
@@ -62,6 +62,7 @@ private:
 	int getInfixPrecedence();
 	std::unique_ptr<Node> parseExpr(int prec = 0);
 	std::unique_ptr<Node> parseStatement();
+	std::unique_ptr<Node> parseBlock();
 };
 
 Parser<std::istreambuf_iterator<char>> newFileParser(std::ifstream& fs);
