@@ -25,6 +25,7 @@ class Object;
 
 class Value {
 public:
+	Value() = default;
 	Value(int32_t integer);
 	Value(double real);
 	Value(Object* obj);
@@ -50,8 +51,6 @@ public:
 	std::string toString();
 	
 private:
-	Value() = default;
-	
 	union {
 		double asDouble;
 		uint64_t asBits;

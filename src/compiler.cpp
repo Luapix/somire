@@ -21,7 +21,15 @@ void Compiler::compileBlock(Chunk& chunk, NodeBlock& block) {
 
 void Compiler::compileStatement(Chunk& chunk, Node& stat) {
 	switch(stat.type) {
-	case NodeType::EXPR_STAT:
+	case NodeType::LET: {
+		if(locals.size() == 0xff)
+			throw CompileError("Too many locals in function");
+		NodeLet& stat2 = static_cast<NodeLet&>(stat);
+		compileExpression(chunk, *stat2.exp);
+		chunk.bytecode.push_back((uint8_t) Opcode::LET_SET);
+		locals[stat2.id] = locals.size();
+		break;
+	} case NodeType::EXPR_STAT:
 		compileExpression(chunk, *static_cast<NodeExprStat&>(stat).exp);
 		chunk.bytecode.push_back((uint8_t) Opcode::IGNORE);
 		break;
@@ -48,6 +56,14 @@ void Compiler::compileExpression(Chunk& chunk, Node& expr) {
 		} else {
 			throw CompileError("Unexpected keyword in expression: " + expr2.val);
 		}
+		break;
+	} case NodeType::ID: {
+		NodeId& expr2 = static_cast<NodeId&>(expr);
+		auto it = locals.find(expr2.val);
+		if(it == locals.end())
+			throw CompileError("Referencing undefined variable " + expr2.val);
+		chunk.bytecode.push_back((uint8_t) Opcode::LOCAL);
+		chunk.bytecode.push_back(it->second);
 		break;
 	} case NodeType::UNI_OP: {
 		NodeUnary& expr2 = static_cast<NodeUnary&>(expr);

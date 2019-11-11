@@ -14,7 +14,9 @@ enum class Opcode : uint8_t {
 	IGNORE,
 	CONSTANT,
 	UNI_MINUS,
-	BIN_PLUS
+	BIN_PLUS,
+	LET_SET,
+	LOCAL
 };
 
 std::string opcodeDesc(Opcode opcode);

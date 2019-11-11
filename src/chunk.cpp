@@ -8,6 +8,8 @@ std::string opcodeDesc(Opcode opcode) {
 	case Opcode::CONSTANT: return "CONSTANT";
 	case Opcode::UNI_MINUS: return "UNI_MINUS";
 	case Opcode::BIN_PLUS: return "BIN_PLUS";
+	case Opcode::LET_SET: return "LET_SET";
+	case Opcode::LOCAL: return "LOCAL";
 	default:
 		throw std::runtime_error("Unknown opcode");
 	}

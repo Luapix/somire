@@ -3,7 +3,7 @@
 #include <iostream>
 #include <string>
 
-VM::VM() : stack(new List()) {}
+VM::VM() : stack(new List()), localBase(0), localCnt(0) {}
 
 void VM::run(Chunk& chunk) {
 	uint32_t pc = 0;
@@ -11,7 +11,7 @@ void VM::run(Chunk& chunk) {
 		Opcode op = static_cast<Opcode>(chunk.bytecode[pc]);
 		switch(op) {
 		case Opcode::IGNORE:
-			clearStack();
+			stack->vec.resize(localBase + localCnt);
 			pc++;
 			break;
 		case Opcode::CONSTANT: {
@@ -33,6 +33,19 @@ void VM::run(Chunk& chunk) {
 			std::cout << "Added top two stack values; top now equal to " << stack->vec.back().toString() << std::endl;
 			pc++;
 			break;
+		} case Opcode::LET_SET: {
+			localCnt++;
+			std::cout << "Set local n°" << localCnt-1 << " to " << stack->vec.back().toString() << std::endl;
+			pc++;
+			break;
+		} case Opcode::LOCAL: {
+			uint8_t localIdx = chunk.bytecode[pc+1];
+			if(localIdx >= localCnt)
+				throw ExecutionError("Trying to access undefined local");
+			stack->vec.push_back(stack->vec[localBase + localIdx]);
+			std::cout << "Pushed local n°" << (int) localIdx << " on the stack; top now equal to " << stack->vec.back().toString() << std::endl;
+			pc += 2;
+			break;
 		} default:
 			throw ExecutionError("Opcode " + opcodeDesc(op) + " not yet implemented");
 		}
@@ -47,8 +60,4 @@ Value VM::pop() {
 	Value val = stack->vec.back();
 	stack->vec.pop_back();
 	return val;
-}
-
-void VM::clearStack() {
-	stack->vec.clear();
 }

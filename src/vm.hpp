@@ -12,7 +12,8 @@ public:
 	
 private:
 	GC::Root<List> stack;
+	uint32_t localBase;
+	uint32_t localCnt;
 	
 	Value pop();
-	void clearStack();
 };
