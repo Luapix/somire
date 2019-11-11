@@ -1,6 +1,7 @@
 #include "chunk.hpp"
 
 #include <stdexcept>
+#include <sstream>
 
 std::unordered_map<Opcode, std::string> opcodeDescTable = {
 	{Opcode::IGNORE, "IGNORE"},
@@ -59,3 +60,43 @@ double parseReal(std::array<uint8_t, 8> b) {
 }
 
 Chunk::Chunk() : constants(new List()) {}
+
+std::string Chunk::list() {
+	std::stringstream res;
+	
+	res << "Constants:\n";
+	for(uint32_t i = 0; i < constants->vec.size(); i++) {
+		res << i << ": " << constants->vec[i].toString() << "\n";
+	}
+	
+	res << "\nCode:\n";
+	uint32_t i = 0;
+	while(i < bytecode.size()) {
+		Opcode op = static_cast<Opcode>(bytecode[i]);
+		res << opcodeDesc(op);
+		switch(op) {
+		case Opcode::CONSTANT:
+		case Opcode::SET:
+		case Opcode::LOCAL:
+		case Opcode::JUMP_IF_NOT:
+			res << " " << (int) bytecode[i+1];
+			i += 2;
+			break;
+		case Opcode::IGNORE:
+		case Opcode::UNI_MINUS:
+		case Opcode::BIN_PLUS:
+		case Opcode::NOT:
+		case Opcode::AND:
+		case Opcode::OR:
+		case Opcode::EQUALS:
+		case Opcode::LET:
+		case Opcode::LOG:
+		default:
+			i++;
+			break;
+		}
+		res << "\n";
+	}
+	
+	return res.str();
+}

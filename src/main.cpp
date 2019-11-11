@@ -52,12 +52,31 @@ int main(int argc, char const *argv[]) {
 			std::cout << "Compiling..." << std::endl;
 			
 			Compiler compiler;
-			std::unique_ptr<Chunk> chunk = compiler.compileChunk(std::move(program));
+			std::unique_ptr<Chunk> chunk;
+			try {
+				chunk = compiler.compileChunk(std::move(program));
+			} catch(CompileError& e) {
+				std::cout << e.what() << std::endl;
+				return 1;
+			}
 			
 			std::string outputPath = inputPath.substr(0, inputPath.rfind('.')) + ".out";
 			std::ofstream outputFile(outputPath, std::ios::binary);
 			chunk->writeToFile(outputFile);
 		}
+	} else if(op == "list") {
+		std::ifstream inputFile(inputPath, std::ios::binary);
+		if(!inputFile) {
+			std::cout << "Could not open bytecode file" << std::endl;
+			return 1;
+		}
+		
+		{
+			std::unique_ptr<Chunk> chunk = Chunk::loadFromFile(inputFile);
+			std::cout << chunk->list() << std::endl;
+		}
+		GC::collect();
+		GC::logState();
 	} else if(op == "run") {
 		std::ifstream inputFile(inputPath, std::ios::binary);
 		if(!inputFile) {

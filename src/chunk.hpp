@@ -45,6 +45,8 @@ public:
 	template <typename I>
 	static std::unique_ptr<Chunk> loadFromFile(I& input);
 	
+	std::string list();
+	
 private:
 	template <typename O>
 	void writeConstantToFile(O& output, Value val);
