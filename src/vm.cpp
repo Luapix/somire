@@ -33,10 +33,19 @@ void VM::run(Chunk& chunk) {
 			//std::cout << "Added top two stack values; top now equal to " << stack->vec.back().toString() << std::endl;
 			pc++;
 			break;
-		} case Opcode::LET_SET: {
+		} case Opcode::LET: {
 			localCnt++;
 			//std::cout << "Set local n°" << localCnt-1 << " to " << stack->vec.back().toString() << std::endl;
 			pc++;
+			break;
+		} case Opcode::SET: {
+			uint8_t localIdx = chunk.bytecode[pc+1];
+			if(localIdx >= localCnt)
+				throw ExecutionError("Trying to assign to undefined local");
+			Value val = pop();
+			stack->vec[localBase + localIdx] = val;
+			//std::cout << "Assigned " << stack->vec.back().toString() << " to local n°" << (int) localIdx << std::endl;
+			pc += 2;
 			break;
 		} case Opcode::LOCAL: {
 			uint8_t localIdx = chunk.bytecode[pc+1];

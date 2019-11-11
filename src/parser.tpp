@@ -6,7 +6,7 @@ template <typename C>
 Parser<C>::Parser(C start, C end)
 	: curByte(start), end(end), curLine(0), curIndent() {
 	nextChar(); nextChar(); nextChar();
-	nextToken();
+	nextToken(); nextToken();
 }
 
 template <typename C>
@@ -255,7 +255,8 @@ std::unique_ptr<Node> Parser<C>::lexToken() {
 template <typename C>
 std::unique_ptr<Node> Parser<C>::nextToken() {
 	std::unique_ptr<Node> token = lexToken(); // Get new token
-	curToken.swap(token); // Swap with old token
+	curToken.swap(peekToken);
+	peekToken.swap(token);
 	return token; // Return old token
 }
 
@@ -263,7 +264,7 @@ template <typename C>
 void Parser<C>::discardToken(NodeType type) {
 	std::unique_ptr<Node> token = nextToken();
 	if(token->type != type)
-		error("Expected " + nodeTypeDesc(type) + ", got " + nodeTypeDesc(token->type));
+		error("Expected " + nodeTypeDesc(type) + ", got " + token->toString());
 }
 
 template <typename C>
@@ -366,6 +367,12 @@ std::unique_ptr<Node> Parser<C>::parseStatement() {
 		nextToken();
 		std::unique_ptr<Node> expr = parseExpr();
 		return std::unique_ptr<Node>(new NodeLog(std::move(expr)));
+	} else if(curToken->type == NodeType::ID && peekToken->type == NodeType::SYM && static_cast<NodeSymbol&>(*peekToken).val == "=") {
+		std::unique_ptr<Node> idToken = nextToken();
+		std::string id = static_cast<NodeId*>(idToken.get())->val;
+		nextToken();
+		std::unique_ptr<Node> expr = parseExpr();
+		return std::unique_ptr<Node>(new NodeSet(id, std::move(expr)));
 	} else {
 		return std::unique_ptr<Node>(new NodeExprStat(parseExpr()));
 	}

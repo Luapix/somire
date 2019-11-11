@@ -15,7 +15,8 @@ enum class Opcode : uint8_t {
 	CONSTANT,
 	UNI_MINUS,
 	BIN_PLUS,
-	LET_SET,
+	LET,
+	SET,
 	LOCAL,
 	LOG
 };

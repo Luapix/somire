@@ -53,6 +53,7 @@ private:
 	std::unique_ptr<Node> lexToken();
 	
 	std::unique_ptr<Node> curToken;
+	std::unique_ptr<Node> peekToken;
 	
 	std::unique_ptr<Node> nextToken();
 	void discardToken(NodeType type);

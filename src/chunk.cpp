@@ -8,7 +8,8 @@ std::string opcodeDesc(Opcode opcode) {
 	case Opcode::CONSTANT: return "CONSTANT";
 	case Opcode::UNI_MINUS: return "UNI_MINUS";
 	case Opcode::BIN_PLUS: return "BIN_PLUS";
-	case Opcode::LET_SET: return "LET_SET";
+	case Opcode::LET: return "LET";
+	case Opcode::SET: return "SET";
 	case Opcode::LOCAL: return "LOCAL";
 	case Opcode::LOG: return "LOG";
 	default:

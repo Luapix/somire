@@ -19,6 +19,7 @@ std::string nodeTypeDesc(NodeType type) {
 	case NodeType::UNI_OP: return "unitary";
 	case NodeType::BIN_OP: return "binary";
 	case NodeType::LET: return "let";
+	case NodeType::SET: return "set";
 	case NodeType::EXPR_STAT: return "expression statement";
 	case NodeType::LOG: return "log";
 	case NodeType::BLOCK: return "block";
@@ -117,6 +118,11 @@ NodeLet::NodeLet(std::string id, std::unique_ptr<Node> exp)
 	: Node(NodeType::LET), id(id), exp(std::move(exp)) {}
 
 std::string NodeLet::getDataDesc() { return " " + id + " = " + exp->toString(); }
+
+NodeSet::NodeSet(std::string id, std::unique_ptr<Node> exp)
+	: Node(NodeType::SET), id(id), exp(std::move(exp)) {}
+
+std::string NodeSet::getDataDesc() { return " " + id + " = " + exp->toString(); }
 
 NodeExprStat::NodeExprStat(std::unique_ptr<Node> exp) : Node(NodeType::EXPR_STAT), exp(std::move(exp)) {}
 

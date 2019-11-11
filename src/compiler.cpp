@@ -26,8 +26,17 @@ void Compiler::compileStatement(Chunk& chunk, Node& stat) {
 			throw CompileError("Too many locals in function");
 		NodeLet& stat2 = static_cast<NodeLet&>(stat);
 		compileExpression(chunk, *stat2.exp);
-		chunk.bytecode.push_back((uint8_t) Opcode::LET_SET);
+		chunk.bytecode.push_back((uint8_t) Opcode::LET);
 		locals[stat2.id] = locals.size();
+		break;
+	} case NodeType::SET: {
+		NodeSet& stat2 = static_cast<NodeSet&>(stat);
+		auto it = locals.find(stat2.id);
+		if(it == locals.end())
+			throw CompileError("Assigning to undefined variable " + stat2.id);
+		compileExpression(chunk, *stat2.exp);
+		chunk.bytecode.push_back((uint8_t) Opcode::SET);
+		chunk.bytecode.push_back((uint8_t) it->second);
 		break;
 	} case NodeType::EXPR_STAT:
 		compileExpression(chunk, *static_cast<NodeExprStat&>(stat).exp);
