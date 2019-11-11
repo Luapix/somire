@@ -11,6 +11,7 @@ ExecutionError::ExecutionError(const std::string& what)
 std::string valueTypeDesc(ValueType type) {
 	switch(type) {
 	case ValueType::NIL: return "nil";
+	case ValueType::BOOL: return "boolean";
 	case ValueType::INT: return "int";
 	case ValueType::REAL: return "real";
 	case ValueType::LIST: return "list";
@@ -20,6 +21,10 @@ std::string valueTypeDesc(ValueType type) {
 	}
 }
 
+
+Value::Value() : asBits(NIL) {}
+
+Value::Value(bool boolean) : asBits(BOOL_TAG | (int) boolean) {}
 
 Value::Value(int32_t integer) {
 	asBits = INT_TAG | (uint32_t) integer;
@@ -40,12 +45,6 @@ Value::Value(Object* obj) {
 	asBits = POINTER_TAG | add;
 }
 
-Value Value::nil() {
-	Value v;
-	v.asBits = NIL;
-	return v;
-}
-
 
 void Value::mark() {
 	if(isPointer()) getPointer()->mark();
@@ -53,6 +52,7 @@ void Value::mark() {
 
 ValueType Value::type() {
 	if(isNil()) return ValueType::NIL;
+	else if(isBool()) return ValueType::BOOL;
 	else if(isInt()) return ValueType::INT;
 	else if(isDouble()) return ValueType::REAL;
 	else if(isPointer()) return getPointer()->type;
@@ -60,26 +60,25 @@ ValueType Value::type() {
 }
 
 bool Value::isNil() { return asBits == NIL; }
-bool Value::isInt() { return INT_TAG <= asBits; }
+bool Value::isBool() { return (asBits & TAG_MASK) == BOOL_TAG; }
+bool Value::isInt() { return (asBits & TAG_MASK) == INT_TAG; }
 bool Value::isDouble() { return asBits <= POINTER_TAG; }
-bool Value::isPointer() { return POINTER_TAG < asBits && asBits < INT_TAG; }
+bool Value::isPointer() { return (asBits & TAG_MASK) == POINTER_TAG && asBits != POINTER_TAG; }
 
+bool Value::getBool() { return (bool) (asBits & 0x1); }
 int32_t Value::getInt() { return (int32_t) ((uint32_t) asBits); }
 double Value::getReal() { return asDouble; }
 Object* Value::getPointer() { return reinterpret_cast<Object*>(asBits & 0xffffffffffff); }
 
 Value Value::negate() {
-	if(isNil()) throw ExecutionError("Cannot negate nil value");
-	else if(isInt()) return Value(-getInt());
+	if(isInt()) return Value(-getInt());
 	else if(isDouble()) return Value(-asDouble);
 	else if(isPointer()) return getPointer()->negate();
-	else throw std::runtime_error("Invalid value");
+	else throw ExecutionError("Cannot negate " + valueTypeDesc(type()) + " value");
 }
 
 Value Value::plus(Value other) {
-	if(isNil()) {
-		throw ExecutionError("Cannot add nil value to anything");
-	} else if(isInt()) {
+	if(isInt()) {
 		if(other.isInt())
 			return Value(getInt() + other.getInt());
 		else
@@ -92,13 +91,15 @@ Value Value::plus(Value other) {
 	} else if(isPointer()) {
 		return getPointer()->plus(other);
 	} else {
-		throw std::runtime_error("Invalid value");
+		throw ExecutionError("Cannot add " + valueTypeDesc(type()) + " value to anything");
 	}
 }
 
 std::string Value::toString() {
 	if(isNil()) {
 		return "nil";
+	} else if(isBool()) {
+		return getBool() ? "true" : "false";
 	} else if(isInt()) {
 		return std::to_string(getInt());
 	} else if(isDouble()) {

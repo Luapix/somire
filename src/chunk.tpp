@@ -60,7 +60,11 @@ void Chunk::writeConstantToFile(O& output, Value val) {
 	switch(type) {
 	case ValueType::NIL:
 		break;
-	case ValueType::INT: {
+	case ValueType::BOOL: {
+		bool boolean = val.getBool();
+		output.write((const char*) &boolean, sizeof(bool));
+		break;
+	} case ValueType::INT: {
 		std::array<uint8_t, 4> buf = serializeUInt((uint32_t) val.getInt());
 		output.write((const char*) buf.data(), buf.size());
 		break;
@@ -86,7 +90,10 @@ void Chunk::loadConstantFromFile(I& input) {
 	
 	switch(type) {
 	case ValueType::NIL:
-		constants->vec.push_back(Value::nil());
+		constants->vec.push_back(Value());
+		break;
+	case ValueType::BOOL:
+		constants->vec.push_back(Value((bool) input.get()));
 		break;
 	case ValueType::INT: {
 		std::array<uint8_t, 4> buf;

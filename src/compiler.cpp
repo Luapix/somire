@@ -65,7 +65,11 @@ void Compiler::compileExpression(Chunk& chunk, Node& expr) {
 	case NodeType::SYM: {
 		NodeSymbol& expr2 = static_cast<NodeSymbol&>(expr);
 		if(expr2.val == "nil") {
-			compileConstant(chunk, Value::nil());
+			compileConstant(chunk, Value());
+		} else if(expr2.val == "true") {
+			compileConstant(chunk, Value(true));
+		} else if(expr2.val == "false") {
+			compileConstant(chunk, Value(false));
 		} else {
 			throw CompileError("Unexpected keyword in expression: " + expr2.val);
 		}

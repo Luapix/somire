@@ -12,6 +12,7 @@ public:
 
 enum class ValueType : uint8_t {
 	NIL,
+	BOOL,
 	INT,
 	REAL,
 	LIST,
@@ -25,7 +26,8 @@ class Object;
 
 class Value {
 public:
-	Value() = default;
+	Value();
+	Value(bool boolean);
 	Value(int32_t integer);
 	Value(double real);
 	Value(Object* obj);
@@ -37,10 +39,12 @@ public:
 	ValueType type();
 	
 	bool isNil();
+	bool isBool();
 	bool isInt();
 	bool isDouble();
 	bool isPointer();
 	
+	bool getBool();
 	int32_t getInt();
 	double getReal();
 	Object* getPointer();
@@ -56,9 +60,11 @@ private:
 		uint64_t asBits;
 	};
 	
-	static const uint64_t POINTER_TAG = 0xfff8000000000000;
+	static const uint64_t TAG_MASK    = 0xffff000000000000;
+	static const uint64_t POINTER_TAG = 0xfff8000000000000; // Careful, the 0 pointer is actually NaN
 	static const uint64_t INT_TAG     = 0xfff9000000000000;
 	static const uint64_t NIL         = 0xfffa000000000000;
+	static const uint64_t BOOL_TAG    = 0xfffb000000000000;
 };
 
 class Object : public GC::GCObject {
