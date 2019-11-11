@@ -37,6 +37,9 @@ std::string Node::toString(std::string prefix) {
 
 std::string Node::getDataDesc(std::string prefix) { return ""; }
 
+NodeIndent::NodeIndent(std::string oldIndent) : Node(NodeType::INDENT), oldIndent(oldIndent) {}
+NodeDedent::NodeDedent(std::string newIndent) : Node(NodeType::DEDENT), newIndent(newIndent) {}
+
 NodeId::NodeId(std::string val) : Node(NodeType::ID), val(val) {}
 
 std::string NodeId::getDataDesc(std::string prefix) {

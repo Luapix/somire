@@ -39,6 +39,20 @@ protected:
 	virtual std::string getDataDesc(std::string prefix);
 };
 
+class NodeIndent : public Node {
+public:
+	NodeIndent(std::string oldIndent);
+	
+	const std::string oldIndent;
+};
+
+class NodeDedent : public Node {
+public:
+	NodeDedent(std::string newIndent);
+	
+	const std::string newIndent;
+};
+
 class NodeId : public Node {
 public:
 	NodeId(std::string val);

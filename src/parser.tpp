@@ -1,6 +1,8 @@
 #ifndef PARSER_IMPL_HPP
 #define PARSER_IMPL_HPP
 
+#include <iostream>
+
 
 template <typename C>
 Parser<C>::Parser(C start, C end)
@@ -50,18 +52,18 @@ std::unique_ptr<Node> Parser<C>::lexNewline() {
 		}
 		nextChar();
 	}
-	NodeType type;
+	std::unique_ptr<Node> newline;
 	if(newIndent == curIndent) {
-		type = NodeType::NL;
+		newline.reset(new Node(NodeType::NL));
 	} else if(newIndent.substr(0, curIndent.length()) == curIndent) {
-		type = NodeType::INDENT;
+		newline.reset(new NodeIndent(curIndent));
 	} else if(curIndent.substr(0, newIndent.length()) == newIndent) {
-		type = NodeType::DEDENT;
+		newline.reset(new NodeDedent(newIndent));
 	} else {
 		error("Invalid indentation");
 	}
 	curIndent = newIndent;
-	return std::unique_ptr<Node>(new Node(type));
+	return newline;
 }
 
 std::unordered_set<std::string> keywords = {
@@ -354,6 +356,12 @@ std::unique_ptr<Node> Parser<C>::parseExpr(int prec) {
 }
 
 template <typename C>
+void Parser<C>::finishStatement() {
+	if(!(curToken->type == NodeType::EOI || curToken->type == NodeType::DEDENT))
+		discardToken(NodeType::NL);
+}
+
+template <typename C>
 std::unique_ptr<Node> Parser<C>::parseStatement() {
 	if(isCurSymbol("let")) {
 		nextToken();
@@ -365,28 +373,32 @@ std::unique_ptr<Node> Parser<C>::parseStatement() {
 			error("Expected '=' after 'let' + identifier, got " + curToken->toString());
 		nextToken();
 		std::unique_ptr<Node> expr = parseExpr();
+		finishStatement();
 		return std::unique_ptr<Node>(new NodeLet(id, std::move(expr)));
 	} else if(isCurSymbol("log")) {
 		nextToken();
 		std::unique_ptr<Node> expr = parseExpr();
+		finishStatement();
 		return std::unique_ptr<Node>(new NodeLog(std::move(expr)));
 	} else if(curToken->type == NodeType::ID && peekToken->type == NodeType::SYM && static_cast<NodeSymbol&>(*peekToken).val == "=") {
 		std::unique_ptr<Node> idToken = nextToken();
 		std::string id = static_cast<NodeId*>(idToken.get())->val;
 		nextToken();
 		std::unique_ptr<Node> expr = parseExpr();
+		finishStatement();
 		return std::unique_ptr<Node>(new NodeSet(id, std::move(expr)));
 	} else if(isCurSymbol("if")) {
 		nextToken();
 		std::unique_ptr<Node> cond = parseExpr();
 		if(!isCurSymbol(":"))
-			error("Expected ':' after 'if' + condition, got " + curToken->toString());
+			error("Expected ':' after 'if', got " + curToken->toString());
 		nextToken();
-		discardToken(NodeType::INDENT);
-		std::unique_ptr<Node> block = parseBlock();
+		std::unique_ptr<Node> block = parseIndentedBlock();
 		return std::unique_ptr<Node>(new NodeIf(std::move(cond), std::move(block)));
 	} else {
-		return std::unique_ptr<Node>(new NodeExprStat(parseExpr()));
+		std::unique_ptr<Node> expr = parseExpr();
+		finishStatement();
+		return std::unique_ptr<Node>(new NodeExprStat(std::move(expr)));
 	}
 }
 
@@ -396,10 +408,22 @@ std::unique_ptr<Node> Parser<C>::parseBlock() {
 	while(true) {
 		statements.push_back(parseStatement());
 		if(curToken->type == NodeType::DEDENT || curToken->type == NodeType::EOI) break;
-		discardToken(NodeType::NL);
-		if(curToken->type == NodeType::EOI) break;
 	}
 	return std::unique_ptr<NodeBlock>(new NodeBlock(std::move(statements)));
+}
+
+template <typename C>
+std::unique_ptr<Node> Parser<C>::parseIndentedBlock() {
+	if(curToken->type != NodeType::INDENT)
+		error("Expected indent, got " + curToken->toString());
+	std::string oldIndent = static_cast<NodeIndent&>(*curToken).oldIndent;
+	nextToken();
+	std::unique_ptr<Node> block = parseBlock();
+	if(curToken->type == NodeType::DEDENT) {
+		std::string newIndent = static_cast<NodeDedent&>(*curToken).newIndent;
+		if(newIndent == oldIndent) nextToken();
+	}
+	return block;
 }
 
 template <typename C>
