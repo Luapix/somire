@@ -17,25 +17,25 @@ void VM::run(Chunk& chunk) {
 		case Opcode::CONSTANT: {
 			uint8_t constantIdx = chunk.bytecode[pc+1];
 			stack->vec.push_back(chunk.constants->vec.at(constantIdx));
-			std::cout << "Loaded constant n°" << (int) constantIdx << " = " << stack->vec.back().toString() << std::endl;
+			//std::cout << "Loaded constant n°" << (int) constantIdx << " = " << stack->vec.back().toString() << std::endl;
 			pc += 2;
 			break;
 		} case Opcode::UNI_MINUS: {
 			Value val = pop();
 			stack->vec.push_back(val.negate());
-			std::cout << "Negated stack top; now equal to " << stack->vec.back().toString() << std::endl;
+			//std::cout << "Negated stack top; now equal to " << stack->vec.back().toString() << std::endl;
 			pc++;
 			break;
 		} case Opcode::BIN_PLUS: {
 			Value right = pop();
 			Value left = pop();
 			stack->vec.push_back(left.plus(right));
-			std::cout << "Added top two stack values; top now equal to " << stack->vec.back().toString() << std::endl;
+			//std::cout << "Added top two stack values; top now equal to " << stack->vec.back().toString() << std::endl;
 			pc++;
 			break;
 		} case Opcode::LET_SET: {
 			localCnt++;
-			std::cout << "Set local n°" << localCnt-1 << " to " << stack->vec.back().toString() << std::endl;
+			//std::cout << "Set local n°" << localCnt-1 << " to " << stack->vec.back().toString() << std::endl;
 			pc++;
 			break;
 		} case Opcode::LOCAL: {
@@ -43,10 +43,14 @@ void VM::run(Chunk& chunk) {
 			if(localIdx >= localCnt)
 				throw ExecutionError("Trying to access undefined local");
 			stack->vec.push_back(stack->vec[localBase + localIdx]);
-			std::cout << "Pushed local n°" << (int) localIdx << " on the stack; top now equal to " << stack->vec.back().toString() << std::endl;
+			//std::cout << "Pushed local n°" << (int) localIdx << " on the stack; top now equal to " << stack->vec.back().toString() << std::endl;
 			pc += 2;
 			break;
-		} default:
+		} case Opcode::LOG:
+			std::cout << "[log] " << pop().toString() << std::endl;
+			pc++;
+			break;
+		default:
 			throw ExecutionError("Opcode " + opcodeDesc(op) + " not yet implemented");
 		}
 		GC::collect();

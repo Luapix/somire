@@ -33,6 +33,10 @@ void Compiler::compileStatement(Chunk& chunk, Node& stat) {
 		compileExpression(chunk, *static_cast<NodeExprStat&>(stat).exp);
 		chunk.bytecode.push_back((uint8_t) Opcode::IGNORE);
 		break;
+	case NodeType::LOG:
+		compileExpression(chunk, *static_cast<NodeExprStat&>(stat).exp);
+		chunk.bytecode.push_back((uint8_t) Opcode::LOG);
+		break;
 	default:
 		throw CompileError("Statement type not implemented: " + nodeTypeDesc(stat.type));
 	}

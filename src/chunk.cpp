@@ -10,6 +10,7 @@ std::string opcodeDesc(Opcode opcode) {
 	case Opcode::BIN_PLUS: return "BIN_PLUS";
 	case Opcode::LET_SET: return "LET_SET";
 	case Opcode::LOCAL: return "LOCAL";
+	case Opcode::LOG: return "LOG";
 	default:
 		throw std::runtime_error("Unknown opcode");
 	}

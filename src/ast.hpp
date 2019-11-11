@@ -24,7 +24,7 @@ enum class NodeType {
 	ID, INT, REAL, STR,
 	SYM,
 	UNI_OP, BIN_OP,
-	LET, EXPR_STAT,
+	LET, EXPR_STAT, LOG,
 	BLOCK
 };
 
@@ -132,6 +132,16 @@ public:
 	
 	const std::unique_ptr<Node> exp;
 	
+protected:
+	std::string getDataDesc() override;
+};
+
+class NodeLog : public Node {
+public:
+	NodeLog(std::unique_ptr<Node> exp);
+	
+	const std::unique_ptr<Node> exp;
+
 protected:
 	std::string getDataDesc() override;
 };

@@ -20,6 +20,7 @@ std::string nodeTypeDesc(NodeType type) {
 	case NodeType::BIN_OP: return "binary";
 	case NodeType::LET: return "let";
 	case NodeType::EXPR_STAT: return "expression statement";
+	case NodeType::LOG: return "log";
 	case NodeType::BLOCK: return "block";
 	default:
 		throw std::runtime_error("Unknown node type");
@@ -120,6 +121,10 @@ std::string NodeLet::getDataDesc() { return " " + id + " = " + exp->toString(); 
 NodeExprStat::NodeExprStat(std::unique_ptr<Node> exp) : Node(NodeType::EXPR_STAT), exp(std::move(exp)) {}
 
 std::string NodeExprStat::getDataDesc() { return " " + exp->toString(); }
+
+NodeLog::NodeLog(std::unique_ptr<Node> exp) : Node(NodeType::LOG), exp(std::move(exp)) {}
+
+std::string NodeLog::getDataDesc() { return " " + exp->toString(); }
 
 NodeBlock::NodeBlock(std::vector<std::unique_ptr<Node>> statements)
 	: Node(NodeType::BLOCK), statements(std::move(statements)) {}

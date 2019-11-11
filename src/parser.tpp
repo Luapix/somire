@@ -65,7 +65,7 @@ std::unique_ptr<Node> Parser<C>::lexNewline() {
 }
 
 std::unordered_set<std::string> keywords = {
-	"let", "not", "and", "or", "nil"
+	"let", "not", "and", "or", "nil", "log"
 };
 
 template <typename C>
@@ -362,6 +362,10 @@ std::unique_ptr<Node> Parser<C>::parseStatement() {
 		nextToken();
 		std::unique_ptr<Node> expr = parseExpr();
 		return std::unique_ptr<Node>(new NodeLet(id, std::move(expr)));
+	} else if(isCurSymbol("log")) {
+		nextToken();
+		std::unique_ptr<Node> expr = parseExpr();
+		return std::unique_ptr<Node>(new NodeLog(std::move(expr)));
 	} else {
 		return std::unique_ptr<Node>(new NodeExprStat(parseExpr()));
 	}
