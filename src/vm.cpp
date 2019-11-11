@@ -64,6 +64,12 @@ void VM::run(Chunk& chunk) {
 			//std::cout << "Set local n°" << localCnt-1 << " to " << stack->vec.back().toString() << std::endl;
 			pc++;
 			break;
+		} case Opcode::POP: {
+			uint8_t amount = chunk.bytecode[pc+1];
+			localCnt -= amount;
+			stack->vec.resize(localBase + localCnt);
+			pc += 2;
+			break;
 		} case Opcode::SET: {
 			uint8_t localIdx = chunk.bytecode[pc+1];
 			if(localIdx >= localCnt)

@@ -9,6 +9,7 @@ std::unordered_map<Opcode, std::string> opcodeDescTable = {
 	{Opcode::UNI_MINUS, "UNI_MINUS"},
 	{Opcode::BIN_PLUS, "BIN_PLUS"},
 	{Opcode::LET, "LET"},
+	{Opcode::POP, "POP"},
 	{Opcode::SET, "SET"},
 	{Opcode::LOCAL, "LOCAL"},
 	{Opcode::LOG, "LOG"},
@@ -79,6 +80,7 @@ std::string Chunk::list() {
 		case Opcode::SET:
 		case Opcode::LOCAL:
 		case Opcode::JUMP_IF_NOT:
+		case Opcode::POP:
 			res << " " << (int) bytecode[i+1];
 			i += 2;
 			break;
