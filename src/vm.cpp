@@ -85,7 +85,15 @@ void VM::run(Chunk& chunk) {
 			std::cout << "[log] " << pop().toString() << std::endl;
 			pc++;
 			break;
-		default:
+		case Opcode::JUMP_IF_NOT: {
+			Value cond = pop();
+			uint8_t relJump = chunk.bytecode[pc+1];
+			if(!cond.isBool()) throw ExecutionError("Expected boolean in 'if' condition, got " + cond.toString());
+			pc += 2;
+			if(!cond.getBool())
+				pc += relJump;
+			break;
+		} default:
 			throw ExecutionError("Opcode " + opcodeDesc(op) + " not yet implemented");
 		}
 		GC::collect();

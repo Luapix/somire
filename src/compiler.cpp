@@ -46,7 +46,18 @@ void Compiler::compileStatement(Chunk& chunk, Node& stat) {
 		compileExpression(chunk, *static_cast<NodeExprStat&>(stat).exp);
 		chunk.bytecode.push_back((uint8_t) Opcode::LOG);
 		break;
-	default:
+	case NodeType::IF: {
+		NodeIf& stat2 = static_cast<NodeIf&>(stat);
+		compileExpression(chunk, *stat2.cond);
+		chunk.bytecode.push_back((uint8_t) Opcode::JUMP_IF_NOT);
+		chunk.bytecode.push_back(0); // placeholder
+		uint32_t priorAdd = chunk.bytecode.size();
+		compileBlock(chunk, static_cast<NodeBlock&>(*stat2.block));
+		uint32_t relJump = chunk.bytecode.size() - (int32_t) priorAdd;
+		if(relJump > 0xff) throw CompileError("Can't jump more than 255 instructions away");
+		chunk.bytecode[priorAdd-1] = (uint8_t) relJump;
+		break;
+	} default:
 		throw CompileError("Statement type not implemented: " + nodeTypeDesc(stat.type));
 	}
 }

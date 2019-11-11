@@ -20,7 +20,8 @@ enum class Opcode : uint8_t {
 	LOCAL,
 	LOG,
 	NOT, OR, AND,
-	EQUALS
+	EQUALS,
+	JUMP_IF_NOT
 };
 
 std::string opcodeDesc(Opcode opcode);
