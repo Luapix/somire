@@ -1,5 +1,4 @@
-#ifndef AST_HPP
-#define AST_HPP
+#pragma once
 
 #include <stdexcept>
 #include <string>
@@ -187,5 +186,3 @@ public:
 protected:
 	std::string getDataDesc(std::string prefix) override;
 };
-
-#endif

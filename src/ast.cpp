@@ -3,7 +3,7 @@
 #include "util.hpp"
 
 ParseError::ParseError(const std::string& what)
-	: runtime_error("Parse error: " + what) { }
+	: runtime_error(what) { }
 
 std::string nodeTypeDesc(NodeType type) {
 	switch(type) {
