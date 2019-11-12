@@ -8,94 +8,80 @@ VM::VM() : stack(new List()), localBase(0), localCnt(0) {}
 void VM::run(Chunk& chunk) {
 	uint32_t pc = 0;
 	while(pc < chunk.bytecode.size()) {
-		Opcode op = static_cast<Opcode>(chunk.bytecode[pc]);
+		Opcode op = chunk.readOpcode(pc);
 		switch(op) {
 		case Opcode::IGNORE:
 			stack->vec.resize(localBase + localCnt);
-			pc++;
 			break;
 		case Opcode::CONSTANT: {
-			uint8_t constantIdx = chunk.bytecode[pc+1];
+			uint8_t constantIdx = chunk.readUI8(pc);
 			stack->vec.push_back(chunk.constants->vec.at(constantIdx));
 			//std::cout << "Loaded constant n°" << (int) constantIdx << " = " << stack->vec.back().toString() << std::endl;
-			pc += 2;
 			break;
 		} case Opcode::UNI_MINUS: {
 			Value val = pop();
 			stack->vec.push_back(val.negate());
 			//std::cout << "Negated stack top; now equal to " << stack->vec.back().toString() << std::endl;
-			pc++;
 			break;
 		} case Opcode::BIN_PLUS: {
 			Value right = pop();
 			Value left = pop();
 			stack->vec.push_back(left.plus(right));
 			//std::cout << "Added top two stack values; top now equal to " << stack->vec.back().toString() << std::endl;
-			pc++;
 			break;
 		} case Opcode::NOT: {
 			Value val = pop();
 			if(!val.isBool()) throw ExecutionError("Cannot 'not' non-boolean value " + val.toString());
 			stack->vec.emplace_back(!val.getBool());
-			pc++;
 			break;
 		} case Opcode::AND: {
 			Value right = pop();
 			Value left = pop();
 			if(!left.isBool() || !right.isBool()) throw ExecutionError("Cannot 'and' " + left.toString() + " and " + right.toString());
 			stack->vec.emplace_back(left.getBool() && right.getBool());
-			pc++;
 			break;
 		} case Opcode::OR: {
 			Value right = pop();
 			Value left = pop();
 			if(!left.isBool() || !right.isBool()) throw ExecutionError("Cannot 'or' " + left.toString() + " and " + right.toString());
 			stack->vec.emplace_back(left.getBool() || right.getBool());
-			pc++;
 			break;
 		} case Opcode::EQUALS: {
 			Value right = pop();
 			Value left = pop();
 			stack->vec.emplace_back(left.equals(right));
-			pc++;
 			break;
 		} case Opcode::LET: {
 			localCnt++;
 			//std::cout << "Set local n°" << localCnt-1 << " to " << stack->vec.back().toString() << std::endl;
-			pc++;
 			break;
 		} case Opcode::POP: {
-			uint8_t amount = chunk.bytecode[pc+1];
+			uint8_t amount = chunk.readUI8(pc);
 			localCnt -= amount;
 			stack->vec.resize(localBase + localCnt);
-			pc += 2;
 			break;
 		} case Opcode::SET: {
-			uint8_t localIdx = chunk.bytecode[pc+1];
+			uint8_t localIdx = chunk.readUI8(pc);
 			if(localIdx >= localCnt)
 				throw ExecutionError("Trying to assign to undefined local");
 			Value val = pop();
 			stack->vec[localBase + localIdx] = val;
 			//std::cout << "Assigned " << stack->vec.back().toString() << " to local n°" << (int) localIdx << std::endl;
-			pc += 2;
 			break;
 		} case Opcode::LOCAL: {
-			uint8_t localIdx = chunk.bytecode[pc+1];
+			uint8_t localIdx = chunk.readUI8(pc);
 			if(localIdx >= localCnt)
 				throw ExecutionError("Trying to access undefined local");
 			stack->vec.push_back(stack->vec[localBase + localIdx]);
 			//std::cout << "Pushed local n°" << (int) localIdx << " on the stack; top now equal to " << stack->vec.back().toString() << std::endl;
-			pc += 2;
 			break;
 		} case Opcode::LOG:
 			std::cout << "[log] " << pop().toString() << std::endl;
-			pc++;
 			break;
 		case Opcode::JUMP_IF_NOT: {
 			Value cond = pop();
-			uint8_t relJump = chunk.bytecode[pc+1];
+			uint8_t relJump = chunk.readUI8(pc);
 			if(!cond.isBool()) throw ExecutionError("Expected boolean in 'if' condition, got " + cond.toString());
-			pc += 2;
 			if(!cond.getBool())
 				pc += relJump;
 			break;

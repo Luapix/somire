@@ -62,6 +62,48 @@ double parseReal(std::array<uint8_t, 8> b) {
 
 Chunk::Chunk() : constants(new List()) {}
 
+void Chunk::writeOpcode(Opcode op) { bytecode.push_back((uint8_t) op); }
+void Chunk::writeUI8(uint8_t x) { bytecode.push_back(x); }
+
+void Chunk::writeUI16(uint16_t x) {
+	bytecode.push_back((uint8_t) x);
+	bytecode.push_back((uint8_t) (x >> 8));
+}
+
+void Chunk::writeUI32(uint32_t x) {
+	for(uint8_t i = 0; i < 4; i++) {
+		bytecode.push_back((uint8_t) (x >> i*8));
+	}
+}
+
+Opcode Chunk::readOpcode(uint32_t& pc) {
+	Opcode op = (Opcode) bytecode[pc];
+	pc++;
+	return op;
+}
+
+uint8_t Chunk::readUI8(uint32_t& pc) {
+	uint8_t x = bytecode[pc];
+	pc++;
+	return x;
+}
+
+uint16_t Chunk::readUI16(uint32_t& pc) {
+	uint16_t x = (uint16_t) bytecode[pc];
+	x |= ((uint16_t) bytecode[pc+1]) << 8;
+	pc += 2;
+	return x;
+}
+
+uint32_t Chunk::readUI32(uint32_t& pc) {
+	uint32_t x = 0;
+	for(uint8_t i = 0; i < 4; i++) {
+		x |= ((uint32_t) bytecode[pc+i]) << (i*8);
+	}
+	pc += 4;
+	return x;
+}
+
 std::string Chunk::list() {
 	std::stringstream res;
 	

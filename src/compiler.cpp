@@ -54,8 +54,8 @@ void Compiler::compileBlock(Chunk& chunk, NodeBlock& block, Context* parent) {
 		compileStatement(chunk, *stat, ctx);
 	}
 	if(ctx.innerCount() > 0) { // pop locals
-		chunk.bytecode.push_back((uint8_t) Opcode::POP);
-		chunk.bytecode.push_back(ctx.innerCount());
+		chunk.writeOpcode(Opcode::POP);
+		chunk.writeUI8(ctx.innerCount());
 	}
 }
 
@@ -65,27 +65,27 @@ void Compiler::compileStatement(Chunk& chunk, Node& stat, Context& ctx) {
 		NodeLet& stat2 = static_cast<NodeLet&>(stat);
 		ctx.define(stat2.id);
 		compileExpression(chunk, *stat2.exp, ctx);
-		chunk.bytecode.push_back((uint8_t) Opcode::LET);
+		chunk.writeOpcode(Opcode::LET);
 		break;
 	} case NodeType::SET: {
 		NodeSet& stat2 = static_cast<NodeSet&>(stat);
 		compileExpression(chunk, *stat2.exp, ctx);
-		chunk.bytecode.push_back((uint8_t) Opcode::SET);
-		chunk.bytecode.push_back(ctx.getIndex(stat2.id));
+		chunk.writeOpcode(Opcode::SET);
+		chunk.writeUI8(ctx.getIndex(stat2.id));
 		break;
 	} case NodeType::EXPR_STAT:
 		compileExpression(chunk, *static_cast<NodeExprStat&>(stat).exp, ctx);
-		chunk.bytecode.push_back((uint8_t) Opcode::IGNORE);
+		chunk.writeOpcode(Opcode::IGNORE);
 		break;
 	case NodeType::LOG:
 		compileExpression(chunk, *static_cast<NodeExprStat&>(stat).exp, ctx);
-		chunk.bytecode.push_back((uint8_t) Opcode::LOG);
+		chunk.writeOpcode(Opcode::LOG);
 		break;
 	case NodeType::IF: {
 		NodeIf& stat2 = static_cast<NodeIf&>(stat);
 		compileExpression(chunk, *stat2.cond, ctx);
-		chunk.bytecode.push_back((uint8_t) Opcode::JUMP_IF_NOT);
-		chunk.bytecode.push_back(0); // placeholder
+		chunk.writeOpcode(Opcode::JUMP_IF_NOT);
+		chunk.writeUI8(0); // placeholder
 		uint32_t priorAdd = chunk.bytecode.size();
 		compileBlock(chunk, static_cast<NodeBlock&>(*stat2.block), &ctx);
 		uint32_t relJump = chunk.bytecode.size() - (int32_t) priorAdd;
@@ -122,16 +122,16 @@ void Compiler::compileExpression(Chunk& chunk, Node& expr, Context& ctx) {
 		break;
 	} case NodeType::ID: {
 		NodeId& expr2 = static_cast<NodeId&>(expr);
-		chunk.bytecode.push_back((uint8_t) Opcode::LOCAL);
-		chunk.bytecode.push_back(ctx.getIndex(expr2.val));
+		chunk.writeOpcode(Opcode::LOCAL);
+		chunk.writeUI8(ctx.getIndex(expr2.val));
 		break;
 	} case NodeType::UNI_OP: {
 		NodeUnary& expr2 = static_cast<NodeUnary&>(expr);
 		compileExpression(chunk, *expr2.val, ctx);
 		if(expr2.op == "-") {
-			chunk.bytecode.push_back((uint8_t) Opcode::UNI_MINUS);
+			chunk.writeOpcode(Opcode::UNI_MINUS);
 		} else if(expr2.op == "not") {
-			chunk.bytecode.push_back((uint8_t) Opcode::NOT);
+			chunk.writeOpcode(Opcode::NOT);
 		} else {
 			throw CompileError("Unknown unary operator: " + expr2.op);
 		}
@@ -141,13 +141,13 @@ void Compiler::compileExpression(Chunk& chunk, Node& expr, Context& ctx) {
 		compileExpression(chunk, *expr2.left, ctx);
 		compileExpression(chunk, *expr2.right, ctx);
 		if(expr2.op == "+") {
-			chunk.bytecode.push_back((uint8_t) Opcode::BIN_PLUS);
+			chunk.writeOpcode(Opcode::BIN_PLUS);
 		} else if(expr2.op == "and") {
-			chunk.bytecode.push_back((uint8_t) Opcode::AND);
+			chunk.writeOpcode(Opcode::AND);
 		} else if(expr2.op == "or") {
-			chunk.bytecode.push_back((uint8_t) Opcode::OR);
+			chunk.writeOpcode(Opcode::OR);
 		} else if(expr2.op == "==") {
-			chunk.bytecode.push_back((uint8_t) Opcode::EQUALS);
+			chunk.writeOpcode(Opcode::EQUALS);
 		} else {
 			throw CompileError("Unknown binary operator: " + expr2.op);
 		}
@@ -158,7 +158,7 @@ void Compiler::compileExpression(Chunk& chunk, Node& expr, Context& ctx) {
 }
 
 void Compiler::compileConstant(Chunk& chunk, Value val) {
-	chunk.bytecode.push_back((uint8_t) Opcode::CONSTANT);
-	chunk.bytecode.push_back((uint8_t) chunk.constants->vec.size());
+	chunk.writeOpcode(Opcode::CONSTANT);
+	chunk.writeUI8((uint8_t) chunk.constants->vec.size());
 	chunk.constants->vec.push_back(val);
 }

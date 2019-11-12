@@ -39,6 +39,16 @@ public:
 	
 	Chunk();
 	
+	void writeOpcode(Opcode op);
+	void writeUI8(uint8_t x);
+	void writeUI16(uint16_t x);
+	void writeUI32(uint32_t x);
+	
+	Opcode readOpcode(uint32_t& pc);
+	uint8_t readUI8(uint32_t& pc);
+	uint16_t readUI16(uint32_t& pc);
+	uint32_t readUI32(uint32_t& pc);
+	
 	template <typename O>
 	void writeToFile(O& output);
 	
