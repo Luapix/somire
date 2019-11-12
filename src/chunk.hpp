@@ -4,9 +4,15 @@
 #include <cstdint>
 #include <memory>
 #include <unordered_map>
+#include <iterator>
 
 #include "gc.hpp"
 #include "value.hpp"
+
+class CompileError : public std::runtime_error {
+public:
+	CompileError(const std::string& what);
+};
 
 constexpr std::array<uint8_t, 8> magicBytes = { 'S','o','m','i','r','&', 0, 1 };
 
@@ -26,43 +32,54 @@ enum class Opcode : uint8_t {
 
 std::string opcodeDesc(Opcode opcode);
 
-std::array<uint8_t, 4> serializeUInt(uint32_t x);
-uint32_t parseUInt(std::array<uint8_t, 4> b);
+template<typename O>
+void writeUI8(O& it, uint8_t x);
+template<typename O>
+void writeUI16(O& it, uint16_t x);
+template<typename O>
+void writeI16(O& it, int16_t x);
+template<typename O>
+void writeUI32(O& it, uint32_t x);
+template<typename O>
+void writeI32(O& it, int32_t x);
+template<typename O>
+void writeDouble(O& it, double x);
 
-std::array<uint8_t, 8> serializeReal(double x);
-double parseReal(std::array<uint8_t, 8> b);
+template<typename I>
+uint8_t readUI8(I& it);
+template<typename I>
+uint16_t readUI16(I& it);
+template<typename I>
+int16_t readI16(I& it);
+template<typename I>
+uint32_t readUI32(I& it);
+template<typename I>
+int32_t readI32(I& it);
+template<typename I>
+double readDouble(I& it);
 
 class Chunk {
 public:
 	GC::Root<List> constants;
 	std::vector<uint8_t> bytecode;
+	std::back_insert_iterator<std::vector<uint8_t>> codeOut;
 	
 	Chunk();
 	
-	void writeOpcode(Opcode op);
-	void writeUI8(uint8_t x);
-	void writeUI16(uint16_t x);
-	void writeUI32(uint32_t x);
+	void fillInJump(uint32_t pos);
 	
-	Opcode readOpcode(uint32_t& pc);
-	uint8_t readUI8(uint32_t& pc);
-	uint16_t readUI16(uint32_t& pc);
-	uint32_t readUI32(uint32_t& pc);
+	void writeToFile(std::ofstream& fs);
 	
-	template <typename O>
-	void writeToFile(O& output);
-	
-	template <typename I>
-	static std::unique_ptr<Chunk> loadFromFile(I& input);
+	static std::unique_ptr<Chunk> loadFromFile(std::ifstream& fs);
 	
 	std::string list();
 	
 private:
 	template <typename O>
-	void writeConstantToFile(O& output, Value val);
+	void writeConstantToFile(O& it, Value val);
 	
 	template <typename I>
-	void loadConstantFromFile(I& input);
+	void loadConstantFromFile(I& it);
 };
 
 #include "chunk.tpp"

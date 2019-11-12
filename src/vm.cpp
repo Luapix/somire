@@ -6,15 +6,15 @@
 VM::VM() : stack(new List()), localBase(0), localCnt(0) {}
 
 void VM::run(Chunk& chunk) {
-	uint32_t pc = 0;
-	while(pc < chunk.bytecode.size()) {
-		Opcode op = chunk.readOpcode(pc);
+	auto it = chunk.bytecode.begin();
+	while(it != chunk.bytecode.end()) {
+		Opcode op = (Opcode) readUI8(it);
 		switch(op) {
 		case Opcode::IGNORE:
 			stack->vec.resize(localBase + localCnt);
 			break;
 		case Opcode::CONSTANT: {
-			uint8_t constantIdx = chunk.readUI8(pc);
+			uint16_t constantIdx = readUI16(it);
 			stack->vec.push_back(chunk.constants->vec.at(constantIdx));
 			//std::cout << "Loaded constant n°" << (int) constantIdx << " = " << stack->vec.back().toString() << std::endl;
 			break;
@@ -56,12 +56,12 @@ void VM::run(Chunk& chunk) {
 			//std::cout << "Set local n°" << localCnt-1 << " to " << stack->vec.back().toString() << std::endl;
 			break;
 		} case Opcode::POP: {
-			uint8_t amount = chunk.readUI8(pc);
+			uint16_t amount = readUI16(it);
 			localCnt -= amount;
 			stack->vec.resize(localBase + localCnt);
 			break;
 		} case Opcode::SET: {
-			uint8_t localIdx = chunk.readUI8(pc);
+			uint16_t localIdx = readUI16(it);
 			if(localIdx >= localCnt)
 				throw ExecutionError("Trying to assign to undefined local");
 			Value val = pop();
@@ -69,7 +69,7 @@ void VM::run(Chunk& chunk) {
 			//std::cout << "Assigned " << stack->vec.back().toString() << " to local n°" << (int) localIdx << std::endl;
 			break;
 		} case Opcode::LOCAL: {
-			uint8_t localIdx = chunk.readUI8(pc);
+			uint16_t localIdx = readUI16(it);
 			if(localIdx >= localCnt)
 				throw ExecutionError("Trying to access undefined local");
 			stack->vec.push_back(stack->vec[localBase + localIdx]);
@@ -80,10 +80,10 @@ void VM::run(Chunk& chunk) {
 			break;
 		case Opcode::JUMP_IF_NOT: {
 			Value cond = pop();
-			uint8_t relJump = chunk.readUI8(pc);
+			int16_t relJump = readI16(it);
 			if(!cond.isBool()) throw ExecutionError("Expected boolean in 'if' condition, got " + cond.toString());
 			if(!cond.getBool())
-				pc += relJump;
+				it += relJump;
 			break;
 		} default:
 			throw ExecutionError("Opcode " + opcodeDesc(op) + " not yet implemented");

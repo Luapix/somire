@@ -7,26 +7,21 @@
 #include "ast.hpp"
 #include "chunk.hpp"
 
-class CompileError : public std::runtime_error {
-public:
-	CompileError(const std::string& what);
-};
-
 class Context {
 public:
 	Context(Context* parent);
 	
 	bool isInner(std::string var);
-	uint8_t innerCount();
+	uint16_t innerCount();
 	
 	void define(std::string var);
-	uint8_t getIndex(std::string var);
+	uint16_t getIndex(std::string var);
 	
 private:
 	Context* parent;
-	std::unordered_map<std::string, uint8_t> innerLocals;
+	std::unordered_map<std::string, uint16_t> innerLocals;
 	
-	uint8_t nextIndex();
+	uint16_t nextIndex();
 };
 
 class Compiler {

@@ -2,6 +2,11 @@
 
 #include <stdexcept>
 #include <sstream>
+#include <limits>
+#include <fstream>
+
+CompileError::CompileError(const std::string& what)
+	: runtime_error("Compile error: " + what) { }
 
 std::unordered_map<Opcode, std::string> opcodeDescTable = {
 	{Opcode::IGNORE, "IGNORE"},
@@ -27,81 +32,64 @@ std::string opcodeDesc(Opcode opcode) {
 	return it->second;
 }
 
-std::array<uint8_t, 4> serializeUInt(uint32_t x) {
-	std::array<uint8_t, 4> res;
-	for(uint8_t i = 0; i < res.size(); i++) {
-		res[i] = x >> (i*8);
+Chunk::Chunk() : constants(new List()), codeOut(bytecode) {}
+
+void Chunk::fillInJump(uint32_t pos) {
+	int32_t relJmp = bytecode.size() - (int32_t) (pos + 2);
+	if(relJmp < std::numeric_limits<int16_t>::min() || std::numeric_limits<int16_t>::max() < relJmp)
+		throw std::runtime_error("Relative jump outside of int16_t limits");
+	int16_t x = (int16_t) relJmp;
+	auto it = &bytecode[pos];
+	writeI16(it, x);
+}
+
+void Chunk::writeToFile(std::ofstream& fs) {
+	fs.write((const char*) magicBytes.data(), magicBytes.size());
+	
+	std::ostream_iterator<char> it(fs);
+	
+	if(constants->vec.size() > 0xffff)
+		throw std::runtime_error("Too many constants in chunk");
+	uint16_t constantCnt = (uint16_t) constants->vec.size();
+	writeUI16(it, constantCnt);
+	
+	for(Value cnst : constants->vec) {
+		writeConstantToFile(it, cnst);
 	}
-	return res;
+	
+	fs.write((const char*) bytecode.data(), bytecode.size());
 }
 
-uint32_t parseUInt(std::array<uint8_t, 4> b) {
-	uint32_t x = 0;
-	for(uint8_t i = 0; i < b.size(); i++) {
-		x |= ((uint32_t) b[i]) << (i*8);
+std::unique_ptr<Chunk> Chunk::loadFromFile(std::ifstream& fs) {
+	if(!fs.is_open()) throw ExecutionError("Unable to open file");
+	fs.exceptions(std::ios_base::failbit);
+	
+	std::array<uint8_t, magicBytes.size()> buffer;
+	fs.read((char*) buffer.data(), buffer.size());
+	if((int) fs.gcount() != (int) buffer.size()) {
+		throw std::runtime_error("Unexpected EOF in bytecode file");
 	}
-	return x;
-}
-
-std::array<uint8_t, 8> serializeReal(double x) {
-	uint64_t& x2 = reinterpret_cast<uint64_t&>(x);
-	std::array<uint8_t, 8> res;
-	for(uint8_t i = 0; i < res.size(); i++) {
-		res[i] = x2 >> (i*8);
+	if(buffer != magicBytes) {
+		throw std::runtime_error("Invalid Somiré bytecode file");
 	}
-	return res;
-}
-
-double parseReal(std::array<uint8_t, 8> b) {
-	uint64_t x2 = 0;
-	for(uint8_t i = 0; i < b.size(); i++) {
-		x2 |= ((uint64_t) b[i]) << (i*8);
+	
+	std::unique_ptr<Chunk> chunk(new Chunk());
+	std::istreambuf_iterator<char> it(fs);
+	
+	uint16_t constantCnt = readUI16(it);
+	for(uint8_t i = 0; i < constantCnt; i++) {
+		chunk->loadConstantFromFile(it);
 	}
-	return reinterpret_cast<double&>(x2);
-}
-
-Chunk::Chunk() : constants(new List()) {}
-
-void Chunk::writeOpcode(Opcode op) { bytecode.push_back((uint8_t) op); }
-void Chunk::writeUI8(uint8_t x) { bytecode.push_back(x); }
-
-void Chunk::writeUI16(uint16_t x) {
-	bytecode.push_back((uint8_t) x);
-	bytecode.push_back((uint8_t) (x >> 8));
-}
-
-void Chunk::writeUI32(uint32_t x) {
-	for(uint8_t i = 0; i < 4; i++) {
-		bytecode.push_back((uint8_t) (x >> i*8));
-	}
-}
-
-Opcode Chunk::readOpcode(uint32_t& pc) {
-	Opcode op = (Opcode) bytecode[pc];
-	pc++;
-	return op;
-}
-
-uint8_t Chunk::readUI8(uint32_t& pc) {
-	uint8_t x = bytecode[pc];
-	pc++;
-	return x;
-}
-
-uint16_t Chunk::readUI16(uint32_t& pc) {
-	uint16_t x = (uint16_t) bytecode[pc];
-	x |= ((uint16_t) bytecode[pc+1]) << 8;
-	pc += 2;
-	return x;
-}
-
-uint32_t Chunk::readUI32(uint32_t& pc) {
-	uint32_t x = 0;
-	for(uint8_t i = 0; i < 4; i++) {
-		x |= ((uint32_t) bytecode[pc+i]) << (i*8);
-	}
-	pc += 4;
-	return x;
+	
+	size_t bytecodeStart = (size_t) fs.tellg();
+	fs.seekg(0, std::ios::end);
+	size_t size = (size_t) fs.tellg() - bytecodeStart;
+	chunk->bytecode.resize(size);
+	
+	fs.seekg(bytecodeStart, std::ios::beg);
+	fs.read((char*) chunk->bytecode.data(), size);
+	
+	return chunk;
 }
 
 std::string Chunk::list() {
@@ -113,18 +101,19 @@ std::string Chunk::list() {
 	}
 	
 	res << "\nCode:\n";
-	uint32_t i = 0;
-	while(i < bytecode.size()) {
-		Opcode op = static_cast<Opcode>(bytecode[i]);
+	auto it = bytecode.begin();
+	while(it != bytecode.end()) {
+		Opcode op = static_cast<Opcode>(readUI8(it));
 		res << opcodeDesc(op);
 		switch(op) {
 		case Opcode::CONSTANT:
 		case Opcode::SET:
 		case Opcode::LOCAL:
-		case Opcode::JUMP_IF_NOT:
 		case Opcode::POP:
-			res << " " << (int) bytecode[i+1];
-			i += 2;
+			res << " " << (int) readUI16(it);
+			break;
+		case Opcode::JUMP_IF_NOT:
+			res << " " << (int) readI16(it);
 			break;
 		case Opcode::IGNORE:
 		case Opcode::UNI_MINUS:
@@ -136,7 +125,6 @@ std::string Chunk::list() {
 		case Opcode::LET:
 		case Opcode::LOG:
 		default:
-			i++;
 			break;
 		}
 		res << "\n";
