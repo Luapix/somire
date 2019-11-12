@@ -85,7 +85,10 @@ void VM::run(Chunk& chunk) {
 			if(!cond.getBool())
 				it += relJump;
 			break;
-		} default:
+		} case Opcode::JUMP:
+			it += readI16(it);
+			break;
+		default:
 			throw ExecutionError("Opcode " + opcodeDesc(op) + " not yet implemented");
 		}
 		GC::collect();

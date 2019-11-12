@@ -22,7 +22,8 @@ std::unordered_map<Opcode, std::string> opcodeDescTable = {
 	{Opcode::AND, "AND"},
 	{Opcode::OR, "OR"},
 	{Opcode::EQUALS, "EQUALS"},
-	{Opcode::JUMP_IF_NOT, "JUMP_IF_NOT"}
+	{Opcode::JUMP_IF_NOT, "JUMP_IF_NOT"},
+	{Opcode::JUMP, "JUMP"}
 };
 
 std::string opcodeDesc(Opcode opcode) {
@@ -32,13 +33,17 @@ std::string opcodeDesc(Opcode opcode) {
 	return it->second;
 }
 
+int16_t computeJump(uint32_t from, uint32_t to) {
+	int32_t relJmp = (int32_t) to - (int32_t) from;
+	if(relJmp < std::numeric_limits<int16_t>::min() || std::numeric_limits<int16_t>::max() < relJmp)
+		throw std::runtime_error("Relative jump outside of int16_t limits");
+	return (int16_t) relJmp;
+}
+
 Chunk::Chunk() : constants(new List()), codeOut(bytecode) {}
 
 void Chunk::fillInJump(uint32_t pos) {
-	int32_t relJmp = bytecode.size() - (int32_t) (pos + 2);
-	if(relJmp < std::numeric_limits<int16_t>::min() || std::numeric_limits<int16_t>::max() < relJmp)
-		throw std::runtime_error("Relative jump outside of int16_t limits");
-	int16_t x = (int16_t) relJmp;
+	int16_t x = computeJump(pos + 2, bytecode.size());
 	auto it = &bytecode[pos];
 	writeI16(it, x);
 }
@@ -113,6 +118,7 @@ std::string Chunk::list() {
 			res << " " << (int) readUI16(it);
 			break;
 		case Opcode::JUMP_IF_NOT:
+		case Opcode::JUMP:
 			res << " " << (int) readI16(it);
 			break;
 		case Opcode::IGNORE:

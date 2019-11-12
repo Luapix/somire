@@ -158,6 +158,14 @@ std::unique_ptr<Node> Parser<C>::parseStatement() {
 		nextToken();
 		std::unique_ptr<Node> block = parseIndentedBlock();
 		return std::unique_ptr<Node>(new NodeIf(std::move(cond), std::move(block)));
+	} else if(isCurSymbol("while")) {
+		nextToken();
+		std::unique_ptr<Node> cond = parseExpr();
+		if(!isCurSymbol(":"))
+			error("Expected ':' after 'while', got " + curToken->toString());
+		nextToken();
+		std::unique_ptr<Node> block = parseIndentedBlock();
+		return std::unique_ptr<Node>(new NodeWhile(std::move(cond), std::move(block)));
 	} else {
 		std::unique_ptr<Node> expr = parseExpr();
 		finishStatement();

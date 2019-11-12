@@ -27,7 +27,8 @@ enum class Opcode : uint8_t {
 	LOG,
 	NOT, OR, AND,
 	EQUALS,
-	JUMP_IF_NOT
+	JUMP_IF_NOT,
+	JUMP
 };
 
 std::string opcodeDesc(Opcode opcode);
@@ -57,6 +58,8 @@ template<typename I>
 int32_t readI32(I& it);
 template<typename I>
 double readDouble(I& it);
+
+int16_t computeJump(uint32_t from, uint32_t to);
 
 class Chunk {
 public:
