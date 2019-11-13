@@ -104,6 +104,11 @@ void Compiler::compileStatement(Chunk& chunk, Node& stat, Context& ctx) {
 	}
 }
 
+std::unordered_map<std::string, Opcode> binaryOps = {
+	{"+", Opcode::BIN_PLUS}, {"-", Opcode::BIN_MINUS}, {"*", Opcode::MULTIPLY}, {"/", Opcode::DIVIDE},
+	{"and", Opcode::AND}, {"or", Opcode::OR}, {"==", Opcode::EQUALS}
+};
+
 void Compiler::compileExpression(Chunk& chunk, Node& expr, Context& ctx) {
 	switch(expr.type) {
 	case NodeType::INT:
@@ -147,14 +152,9 @@ void Compiler::compileExpression(Chunk& chunk, Node& expr, Context& ctx) {
 		NodeBinary& expr2 = static_cast<NodeBinary&>(expr);
 		compileExpression(chunk, *expr2.left, ctx);
 		compileExpression(chunk, *expr2.right, ctx);
-		if(expr2.op == "+") {
-			writeUI8(chunk.codeOut, (uint8_t) Opcode::BIN_PLUS);
-		} else if(expr2.op == "and") {
-			writeUI8(chunk.codeOut, (uint8_t) Opcode::AND);
-		} else if(expr2.op == "or") {
-			writeUI8(chunk.codeOut, (uint8_t) Opcode::OR);
-		} else if(expr2.op == "==") {
-			writeUI8(chunk.codeOut, (uint8_t) Opcode::EQUALS);
+		auto it = binaryOps.find(expr2.op);
+		if(it != binaryOps.end()) {
+			writeUI8(chunk.codeOut, (uint8_t) it->second);
 		} else {
 			throw CompileError("Unknown binary operator: " + expr2.op);
 		}

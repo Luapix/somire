@@ -44,6 +44,9 @@ public:
 	bool isReal();
 	bool isPointer();
 	
+	bool isNumeric();
+	double convertToDouble();
+	
 	bool getBool();
 	int32_t getInt();
 	double getReal();
@@ -51,6 +54,9 @@ public:
 	
 	Value negate();
 	Value plus(Value other);
+	Value minus(Value other);
+	Value divide(Value other);
+	Value multiply(Value other);
 	
 	bool equals(Value other);
 	

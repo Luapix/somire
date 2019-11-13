@@ -66,6 +66,9 @@ bool Value::isInt() { return (asBits & TAG_MASK) == INT_TAG; }
 bool Value::isReal() { return asBits <= POINTER_TAG; }
 bool Value::isPointer() { return (asBits & TAG_MASK) == POINTER_TAG && asBits != POINTER_TAG; }
 
+bool Value::isNumeric() { return isInt() || isReal(); }
+double Value::convertToDouble() { return isInt() ? (double) getInt() : asDouble; }
+
 bool Value::getBool() { return (bool) (asBits & 0x1); }
 int32_t Value::getInt() { return (int32_t) ((uint32_t) asBits); }
 double Value::getReal() { return asDouble; }
@@ -75,24 +78,48 @@ Value Value::negate() {
 	if(isInt()) return Value(-getInt());
 	else if(isReal()) return Value(-asDouble);
 	else if(isPointer()) return getPointer()->negate();
-	else throw ExecutionError("Cannot negate " + valueTypeDesc(type()) + " value");
+	else throw ExecutionError("Cannot negate " + valueTypeDesc(type()));
 }
 
 Value Value::plus(Value other) {
-	if(isInt()) {
-		if(other.isInt())
-			return Value(getInt() + other.getInt());
-		else
-			throw ExecutionError("Cannot add int to " + valueTypeDesc(other.type()) + " value");
-	} else if(isReal()) {
-		if(other.isReal())
-			return Value(asDouble + other.asDouble);
-		else
-			throw ExecutionError("Cannot add real to " + valueTypeDesc(other.type()) + " value");
+	if(isInt() && other.isInt()) {
+		return Value(getInt() + other.getInt());
+	} else if(isNumeric() && other.isNumeric()) {
+		return Value(convertToDouble() + other.convertToDouble());
 	} else if(isPointer()) {
 		return getPointer()->plus(other);
 	} else {
-		throw ExecutionError("Cannot add " + valueTypeDesc(type()) + " value to anything");
+		throw ExecutionError("Cannot add " + valueTypeDesc(type()) + " to " + valueTypeDesc(other.type()));
+	}
+}
+
+Value Value::minus(Value other) {
+	if(isInt() && other.isInt()) {
+		return Value(getInt() - other.getInt());
+	} else if(isNumeric() && other.isNumeric()) {
+		return Value(convertToDouble() - other.convertToDouble());
+	} else {
+		throw ExecutionError("Cannot substract " + valueTypeDesc(type()) + " from " + valueTypeDesc(other.type()));
+	}
+}
+
+Value Value::divide(Value other) {
+	if(isNumeric() && other.isNumeric()) {
+		double x2 = other.convertToDouble();
+		if(x2 == 0.0) throw ExecutionError("Cannot divide by zero");
+		return Value(convertToDouble() / x2);
+	} else {
+		throw ExecutionError("Cannot divide " + valueTypeDesc(type()) + " by " + valueTypeDesc(other.type()));
+	}
+}
+
+Value Value::multiply(Value other) {
+	if(isInt() && other.isInt()) {
+		return Value(getInt() * other.getInt());
+	} else if(isNumeric() && other.isNumeric()) {
+		return Value(convertToDouble() * other.convertToDouble());
+	} else {
+		throw ExecutionError("Cannot multiply " + valueTypeDesc(type()) + " by " + valueTypeDesc(other.type()));
 	}
 }
 
@@ -127,11 +154,11 @@ std::string Value::toString() {
 Object::Object(ValueType type) : type(type) {}
 
 Value Object::negate() {
-	throw ExecutionError("Can't negate " + valueTypeDesc(type) + " value");
+	throw ExecutionError("Can't negate " + valueTypeDesc(type));
 }
 
 Value Object::plus(Value other) {
-	throw ExecutionError("Cannot add " + valueTypeDesc(type) + " value to anything");
+	throw ExecutionError("Cannot add " + valueTypeDesc(type) + " to " + valueTypeDesc(other.type()));
 }
 
 bool Object::equals(Object& obj) {

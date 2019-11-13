@@ -29,6 +29,22 @@ void VM::run(Chunk& chunk) {
 			stack->vec.push_back(left.plus(right));
 			//std::cout << "Added top two stack values; top now equal to " << stack->vec.back().toString() << std::endl;
 			break;
+		} case Opcode::BIN_MINUS: {
+			Value right = pop();
+			Value left = pop();
+			stack->vec.push_back(left.minus(right));
+			break;
+		} case Opcode::MULTIPLY: {
+			Value right = pop();
+			Value left = pop();
+			stack->vec.push_back(left.multiply(right));
+			break;
+		} case Opcode::DIVIDE: {
+			Value right = pop();
+			Value left = pop();
+			stack->vec.push_back(left.divide(right));
+			//std::cout << "Added top two stack values; top now equal to " << stack->vec.back().toString() << std::endl;
+			break;
 		} case Opcode::NOT: {
 			Value val = pop();
 			if(!val.isBool()) throw ExecutionError("Cannot 'not' non-boolean value " + val.toString());
