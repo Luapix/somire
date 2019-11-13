@@ -192,7 +192,12 @@ std::unique_ptr<Node> Parser<C>::parseIndentedBlock() {
 	std::unique_ptr<Node> block = parseBlock();
 	if(curToken->type == NodeType::DEDENT) {
 		std::string newIndent = static_cast<NodeDedent&>(*curToken).newIndent;
-		if(newIndent == oldIndent) nextToken();
+		if(newIndent == oldIndent) {
+			nextToken();
+		} else if(newIndent.substr(0, oldIndent.length()) == oldIndent) {
+			// if newIndent starts with oldIndent but isn't equal, it's an invalid, partial dedent
+			throw ParseError("Invalid dedent in block");
+		}
 	}
 	return block;
 }
