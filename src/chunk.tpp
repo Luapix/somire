@@ -50,7 +50,7 @@ template<typename I>
 uint16_t readUI16(I& it) {
 	uint16_t x = 0;
 	for(uint8_t i = 0; i < 2; i++) {
-		x |= ((uint16_t) *it++) << (i*8);
+		x |= ((uint16_t) ((uint8_t) *it++)) << (i*8);
 	}
 	return x;
 }
@@ -64,7 +64,7 @@ template<typename I>
 uint32_t readUI32(I& it) {
 	uint32_t x = 0;
 	for(uint8_t i = 0; i < 4; i++) {
-		x |= ((uint32_t) *it++) << (i*8);
+		x |= ((uint32_t) ((uint8_t) *it++)) << (i*8);
 	}
 	return x;
 }
