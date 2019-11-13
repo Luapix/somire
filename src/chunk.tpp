@@ -78,7 +78,7 @@ template<typename I>
 double readDouble(I& it) {
 	uint64_t x = 0;
 	for(uint8_t i = 0; i < 8; i++) {
-		x |= ((uint64_t) *it++) << (i*8);
+		x |= ((uint64_t) ((uint8_t) *it++)) << (i*8);
 	}
 	return reinterpret_cast<double&>(x);
 }
