@@ -205,7 +205,9 @@ std::unique_ptr<Node> Parser<C>::parseIndentedBlock() {
 template<typename C>
 std::unique_ptr<Node> Parser<C>::parseProgram() {
 	discardToken(NodeType::NL);
-	return parseBlock();
+	std::unique_ptr<Node> program = parseBlock();
+	discardToken(NodeType::EOI);
+	return program;
 }
 
 
