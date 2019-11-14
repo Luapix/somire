@@ -19,18 +19,15 @@ void VM::run(Chunk& chunk) {
 		case Opcode::CONSTANT: {
 			uint16_t constantIdx = readUI16(it);
 			stack->vec.push_back(chunk.constants->vec.at(constantIdx));
-			//std::cout << "Loaded constant n°" << (int) constantIdx << " = " << stack->vec.back().toString() << std::endl;
 			break;
 		} case Opcode::UNI_MINUS: {
 			Value val = pop();
 			stack->vec.push_back(val.negate());
-			//std::cout << "Negated stack top; now equal to " << stack->vec.back().toString() << std::endl;
 			break;
 		} case Opcode::BIN_PLUS: {
 			Value right = pop();
 			Value left = pop();
 			stack->vec.push_back(left.plus(right));
-			//std::cout << "Added top two stack values; top now equal to " << stack->vec.back().toString() << std::endl;
 			break;
 		} case Opcode::BIN_MINUS: {
 			Value right = pop();
@@ -46,7 +43,6 @@ void VM::run(Chunk& chunk) {
 			Value right = pop();
 			Value left = pop();
 			stack->vec.push_back(left.divide(right));
-			//std::cout << "Added top two stack values; top now equal to " << stack->vec.back().toString() << std::endl;
 			break;
 		} case Opcode::NOT: {
 			Value val = pop();
@@ -72,7 +68,6 @@ void VM::run(Chunk& chunk) {
 			break;
 		} case Opcode::LET: {
 			localCnt++;
-			//std::cout << "Set local n°" << localCnt-1 << " to " << stack->vec.back().toString() << std::endl;
 			break;
 		} case Opcode::POP: {
 			uint16_t amount = readUI16(it);
@@ -85,14 +80,12 @@ void VM::run(Chunk& chunk) {
 				throw ExecutionError("Trying to assign to undefined local");
 			Value val = pop();
 			stack->vec[localBase + localIdx] = val;
-			//std::cout << "Assigned " << stack->vec.back().toString() << " to local n°" << (int) localIdx << std::endl;
 			break;
 		} case Opcode::LOCAL: {
 			uint16_t localIdx = readUI16(it);
 			if(localIdx >= localCnt)
 				throw ExecutionError("Trying to access undefined local");
 			stack->vec.push_back(stack->vec[localBase + localIdx]);
-			//std::cout << "Pushed local n°" << (int) localIdx << " on the stack; top now equal to " << stack->vec.back().toString() << std::endl;
 			break;
 		} case Opcode::GLOBAL: {
 			uint16_t constantIdx = readUI16(it);
