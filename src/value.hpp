@@ -41,19 +41,19 @@ public:
 	
 	ValueType type();
 	
-	bool isNil();
-	bool isBool();
-	bool isInt();
-	bool isReal();
-	bool isPointer();
-	
-	bool isNumeric();
-	double convertToDouble();
-	
-	bool getBool();
-	int32_t getInt();
-	double getReal();
-	Object* getPointer();
+	inline bool isNil() { return asBits == NIL; }
+	inline bool isBool() { return (asBits & TAG_MASK) == BOOL_TAG; }
+	inline bool isInt() { return (asBits & TAG_MASK) == INT_TAG; }
+	inline bool isReal() { return asBits <= POINTER_TAG; }
+	inline bool isPointer() { return (asBits & TAG_MASK) == POINTER_TAG && asBits != POINTER_TAG; }
+
+	inline bool isNumeric() { return isInt() || isReal(); }
+	inline double convertToDouble() { return isInt() ? (double) getInt() : asDouble; }
+
+	inline bool getBool() { return (bool) (asBits & 0x1); }
+	inline int32_t getInt() { return (int32_t) ((uint32_t) asBits); }
+	inline double getReal() { return asDouble; }
+	inline Object* getPointer() { return reinterpret_cast<Object*>(asBits & 0xffffffffffff); }
 	
 	Value negate();
 	Value plus(Value other);

@@ -129,7 +129,7 @@ void VM::run(Chunk& chunk) {
 	}
 }
 
-Value VM::pop() {
+inline Value VM::pop() {
 	if(stack->vec.empty())
 		throw ExecutionError("Expected operand, stack empty");
 	Value val = stack->vec.back();

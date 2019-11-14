@@ -62,20 +62,6 @@ ValueType Value::type() {
 	else throw std::runtime_error("Invalid value");
 }
 
-bool Value::isNil() { return asBits == NIL; }
-bool Value::isBool() { return (asBits & TAG_MASK) == BOOL_TAG; }
-bool Value::isInt() { return (asBits & TAG_MASK) == INT_TAG; }
-bool Value::isReal() { return asBits <= POINTER_TAG; }
-bool Value::isPointer() { return (asBits & TAG_MASK) == POINTER_TAG && asBits != POINTER_TAG; }
-
-bool Value::isNumeric() { return isInt() || isReal(); }
-double Value::convertToDouble() { return isInt() ? (double) getInt() : asDouble; }
-
-bool Value::getBool() { return (bool) (asBits & 0x1); }
-int32_t Value::getInt() { return (int32_t) ((uint32_t) asBits); }
-double Value::getReal() { return asDouble; }
-Object* Value::getPointer() { return reinterpret_cast<Object*>(asBits & 0xffffffffffff); }
-
 Value Value::negate() {
 	if(isInt()) return Value(-getInt());
 	else if(isReal()) return Value(-asDouble);
