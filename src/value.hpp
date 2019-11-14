@@ -2,6 +2,7 @@
 
 #include <stdexcept>
 #include <cstdint>
+#include <functional>
 
 #include "gc.hpp"
 
@@ -17,7 +18,8 @@ enum class ValueType : uint8_t {
 	REAL,
 	LIST,
 	STR,
-	INTERNAL
+	INTERNAL,
+	FUNC
 };
 
 std::string valueTypeDesc(ValueType type);
@@ -58,6 +60,8 @@ public:
 	Value minus(Value other);
 	Value divide(Value other);
 	Value multiply(Value other);
+	
+	Value call(std::vector<Value> args);
 	
 	bool equals(Value other);
 	
@@ -118,4 +122,14 @@ public:
 	bool equals(Object& obj) override;
 	
 	std::string toString() override;
+};
+
+class CFunction : public Object {
+public:
+	CFunction(std::function<Value(std::vector<Value>)> func);
+	
+	Value call(std::vector<Value> args);
+	
+private:
+	std::function<Value(std::vector<Value>)> func;
 };
