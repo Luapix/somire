@@ -10,97 +10,108 @@
 #include "compiler.hpp"
 #include "vm.hpp"
 
-int main(int argc, char const *argv[]) {
-	if(argc != 3) {
-		std::cout << "\nUsage: somire parse|compile [filename]" << std::endl;
-		return 1;
+bool parse(std::string inputPath, std::unique_ptr<Node>& program) {
+	std::ifstream inputFile(inputPath);
+	if(!inputFile) {
+		std::cout << "Could not open input file" << std::endl;
+		return false;
 	}
-	std::string op(argv[1]);
-	std::string inputPath(argv[2]);
+	try {
+		auto parser = newFileParser(inputFile);
+		program = parser.parseProgram();
+	} catch(ParseError& e) {
+		std::cout << e.what() << std::endl;
+		return false;
+	}
+	return true;
+}
+
+bool compile(std::unique_ptr<Node> program, std::unique_ptr<Chunk>& chunk) {
+	Compiler compiler;
+	try {
+		chunk = compiler.compileChunk(std::move(program));
+	} catch(CompileError& e) {
+		std::cout << e.what() << std::endl;
+		return false;
+	}
+	return true;
+}
+
+bool loadBytecode(std::string inputPath, std::unique_ptr<Chunk>& chunk) {
+	std::ifstream inputFile(inputPath, std::ios::binary);
+	if(!inputFile) {
+		std::cout << "Could not open bytecode file" << std::endl;
+		return false;
+	}
+	
+	chunk = Chunk::loadFromFile(inputFile);
+	return true;
+}
+
+bool run(std::unique_ptr<Chunk>& chunk) {
+	VM vm;
+	try {
+		vm.run(*chunk);
+	} catch(ExecutionError& e) {
+		std::cout << e.what() << std::endl;
+		return false;
+	}
+	return true;
+}
+
+bool doOperation(std::string op, std::string inputPath) {
 	if(op == "parse") {
-		std::ifstream inputFile(inputPath);
-		if(!inputFile) {
-			std::cout << "Could not open input file" << std::endl;
-			return 1;
-		}
-		try {
-			auto parser = newFileParser(inputFile);
-			std::unique_ptr<Node> node = parser.parseProgram();
-			std::cout << node->toString() << std::endl;
-		} catch(ParseError& e) {
-			std::cout << e.what() << std::endl;
-			return 1;
-		}
-	} else if(op == "compile") {
 		std::unique_ptr<Node> program;
-		{
-			std::cout << "Parsing..." << std::endl;
-			std::ifstream inputFile(inputPath);
-			if(!inputFile) {
-				std::cout << "Could not open input file" << std::endl;
-				return 1;
-			}
-			try {
-				auto parser = newFileParser(inputFile);
-				program = parser.parseProgram();
-			} catch(ParseError& e) {
-				std::cout << e.what() << std::endl;
-				return 1;
-			}
-		}
-		{
-			std::cout << "Compiling..." << std::endl;
-			
-			Compiler compiler;
-			std::unique_ptr<Chunk> chunk;
-			try {
-				chunk = compiler.compileChunk(std::move(program));
-			} catch(CompileError& e) {
-				std::cout << e.what() << std::endl;
-				return 1;
-			}
-			
-			std::string outputPath = inputPath.substr(0, inputPath.rfind('.')) + ".out";
-			std::ofstream outputFile(outputPath, std::ios::binary);
-			chunk->writeToFile(outputFile);
-		}
+		if(!parse(inputPath, program)) return false;
+		std::cout << program->toString() << std::endl;
+	} else if(op == "compile") {
+		std::cout << "Parsing..." << std::endl;
+		std::unique_ptr<Node> program;
+		if(!parse(inputPath, program)) return false;
+		
+		std::cout << "Compiling..." << std::endl;
+		std::unique_ptr<Chunk> chunk;
+		if(!compile(std::move(program), chunk)) return false;
+		
+		std::string outputPath = inputPath.substr(0, inputPath.rfind('.')) + ".out";
+		std::ofstream outputFile(outputPath, std::ios::binary);
+		chunk->writeToFile(outputFile);
 	} else if(op == "list") {
-		std::ifstream inputFile(inputPath, std::ios::binary);
-		if(!inputFile) {
-			std::cout << "Could not open bytecode file" << std::endl;
-			return 1;
-		}
+		std::unique_ptr<Chunk> chunk;
+		if(!loadBytecode(inputPath, chunk)) return false;
 		
-		{
-			std::unique_ptr<Chunk> chunk = Chunk::loadFromFile(inputFile);
-			std::cout << chunk->list() << std::endl;
-		}
-		GC::collect();
-		GC::logState();
+		std::cout << chunk->list() << std::endl;
 	} else if(op == "run") {
-		std::ifstream inputFile(inputPath, std::ios::binary);
-		if(!inputFile) {
-			std::cout << "Could not open bytecode file" << std::endl;
-			return 1;
-		}
+		std::unique_ptr<Chunk> chunk;
+		if(!loadBytecode(inputPath, chunk)) return false;
 		
-		int status = 0;
-		{
-			std::unique_ptr<Chunk> chunk = Chunk::loadFromFile(inputFile);
-			VM vm;
-			try {
-				vm.run(*chunk);
-			} catch(ExecutionError& e) {
-				std::cout << e.what() << std::endl;
-				status = 1;
-			}
-		}
-		GC::collect();
-		GC::logState();
-		return status;
+		if(!run(chunk)) return false;
+	} else if(op == "interpret") {
+		std::unique_ptr<Node> program;
+		if(!parse(inputPath, program)) return false;
+		
+		std::unique_ptr<Chunk> chunk;
+		if(!compile(std::move(program), chunk)) return false;
+		
+		if(!run(chunk)) return false;
 	} else {
 		std::cout << "Unknown operation: " << op << std::endl;
+		return false;
+	}
+	return true;
+}
+
+int main(int argc, char const *argv[]) {
+	if(argc != 3) {
+		std::cout << "\nUsage: somire parse|compile|list|run|interpret [filename]" << std::endl;
 		return 1;
 	}
-	return 0;
+	
+	int status = 0;
+	if(!doOperation(argv[1], argv[2]))
+		status = 1;
+	
+	GC::collect();
+	GC::logState();
+	return status;
 }
