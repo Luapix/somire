@@ -181,9 +181,8 @@ std::unique_ptr<Node> Parser<C>::parseStatement() {
 template<typename C>
 std::unique_ptr<Node> Parser<C>::parseBlock() {
 	std::vector<std::unique_ptr<Node>> statements;
-	while(true) {
+	while(curToken->type != NodeType::DEDENT && curToken->type != NodeType::EOI) {
 		statements.push_back(parseStatement());
-		if(curToken->type == NodeType::DEDENT || curToken->type == NodeType::EOI) break;
 	}
 	return std::unique_ptr<NodeBlock>(new NodeBlock(std::move(statements)));
 }
