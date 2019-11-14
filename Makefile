@@ -11,9 +11,9 @@ TIME_CMD := /c/msys64/usr/bin/time -p -q
 
 build: $(OUTPUT)
 
-test: $(OUTPUT) input.txt
-	./$(OUTPUT) compile input.txt
-	$(TIME_CMD) ./$(OUTPUT) run input.out
+test: $(OUTPUT) test.smr
+	./$(OUTPUT) compile test.smr
+	$(TIME_CMD) ./$(OUTPUT) run test.sbf
 
 clean:
 	rm -rf build

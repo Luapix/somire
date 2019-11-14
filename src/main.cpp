@@ -73,7 +73,7 @@ bool doOperation(std::string op, std::string inputPath) {
 		std::unique_ptr<Chunk> chunk;
 		if(!compile(std::move(program), chunk)) return false;
 		
-		std::string outputPath = inputPath.substr(0, inputPath.rfind('.')) + ".out";
+		std::string outputPath = inputPath.substr(0, inputPath.rfind('.')) + ".sbf";
 		std::ofstream outputFile(outputPath, std::ios::binary);
 		chunk->writeToFile(outputFile);
 	} else if(op == "list") {
