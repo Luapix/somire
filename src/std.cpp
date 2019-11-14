@@ -23,6 +23,13 @@ Value log(std::vector<Value>& args) {
 	return Value();
 }
 
+Value writeLine(std::vector<Value>& args) {
+	checkTypes(args, { ValueType::STR });
+	std::cout << static_cast<String*>(args[0].getPointer())->str << std::endl;
+	return Value();
+}
+
 void loadStd(Namespace& ns) {
-	ns.map["print"] = Value(new CFunction(log));
+	ns.map["log"] = Value(new CFunction(log));
+	ns.map["writeLine"] = Value(new CFunction(writeLine));
 }
