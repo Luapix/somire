@@ -125,7 +125,7 @@ Value Value::multiply(Value other) {
 	}
 }
 
-Value Value::call(std::vector<Value> args) {
+Value Value::call(std::vector<Value>& args) {
 	if(type() == ValueType::FUNC) {
 		return static_cast<CFunction*>(getPointer())->call(args);
 	} else {
@@ -211,8 +211,8 @@ std::string String::toString() {
 }
 
 
-CFunction::CFunction(std::function<Value(std::vector<Value>)> func) : Object(ValueType::FUNC), func(func) {}
+CFunction::CFunction(std::function<Value(std::vector<Value>&)> func) : Object(ValueType::FUNC), func(func) {}
 
-Value CFunction::call(std::vector<Value> args) {
+Value CFunction::call(std::vector<Value>& args) {
 	return func(args);
 }

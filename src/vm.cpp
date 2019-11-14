@@ -3,7 +3,9 @@
 #include <iostream>
 #include <string>
 
-VM::VM() : globals(new Namespace()), stack(new List()), localBase(0), localCnt(0) {}
+VM::VM() : globals(new Namespace()), stack(new List()), localBase(0), localCnt(0) {
+	loadStd(*globals);
+}
 
 void VM::run(Chunk& chunk) {
 	auto it = chunk.bytecode.begin();

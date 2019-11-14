@@ -61,7 +61,7 @@ public:
 	Value divide(Value other);
 	Value multiply(Value other);
 	
-	Value call(std::vector<Value> args);
+	Value call(std::vector<Value>& args);
 	
 	bool equals(Value other);
 	
@@ -126,10 +126,10 @@ public:
 
 class CFunction : public Object {
 public:
-	CFunction(std::function<Value(std::vector<Value>)> func);
+	CFunction(std::function<Value(std::vector<Value>&)> func);
 	
-	Value call(std::vector<Value> args);
+	Value call(std::vector<Value>& args);
 	
 private:
-	std::function<Value(std::vector<Value>)> func;
+	std::function<Value(std::vector<Value>&)> func;
 };

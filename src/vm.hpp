@@ -3,6 +3,7 @@
 #include "chunk.hpp"
 #include "value.hpp"
 #include "gc.hpp"
+#include "std.hpp"
 
 class VM {
 public:
