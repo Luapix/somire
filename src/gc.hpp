@@ -16,8 +16,8 @@ namespace GC {
 	void pin(GCObject* obj);
 	void unpin(GCObject* obj);	
 	
-	void logState();
 	void collect();
+	void step();
 	
 	class GCObject {
 	public:

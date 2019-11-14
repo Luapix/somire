@@ -125,8 +125,7 @@ void VM::run(Chunk& chunk) {
 		} default:
 			throw ExecutionError("Opcode " + opcodeDesc(op) + " not yet implemented");
 		}
-		GC::collect();
-		GC::logState();
+		GC::step();
 	}
 }
 

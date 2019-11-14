@@ -9,6 +9,8 @@ namespace GC {
 		std::unordered_set<GCObject*> objects;
 		std::unordered_map<GCObject*, int> rootObjects;
 		
+		uint32_t nextCollect = 16;
+		
 		void add(GCObject* obj) {
 			objects.insert(obj);
 		}
@@ -51,6 +53,14 @@ namespace GC {
 		}
 		
 		IF_DEBUG_GC(std::cout << "Done collecting." << std::endl;)
+		logState();
+	}
+	
+	void step() {
+		if(objects.size() >= nextCollect) {
+			GC::collect();
+			nextCollect = objects.size() * 2;
+		}
 	}
 	
 	GCObject::GCObject() : _marked(false) {

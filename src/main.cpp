@@ -112,6 +112,5 @@ int main(int argc, char const *argv[]) {
 		status = 1;
 	
 	GC::collect();
-	GC::logState();
 	return status;
 }
