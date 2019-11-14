@@ -26,6 +26,7 @@ private:
 	
 	std::unique_ptr<Node> nextToken();
 	void discardToken(NodeType type);
+	void discardSymbol(std::string sym);
 	bool isCurSymbol(std::string sym);
 	
 	int getInfixPrecedence();

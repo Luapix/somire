@@ -168,10 +168,11 @@ protected:
 
 class NodeIf : public Node {
 public:
-	NodeIf(std::unique_ptr<Node> cond, std::unique_ptr<Node> block);
+	NodeIf(std::unique_ptr<Node> cond, std::unique_ptr<Node> thenBlock);
 	
 	const std::unique_ptr<Node> cond;
-	const std::unique_ptr<Node> block;
+	const std::unique_ptr<Node> thenBlock;
+	std::unique_ptr<Node> elseBlock;
 	
 protected:
 	std::string getDataDesc(std::string prefix) override;

@@ -84,8 +84,18 @@ void Compiler::compileStatement(Chunk& chunk, Node& stat, Context& ctx) {
 		writeUI8(chunk.codeOut, (uint8_t) Opcode::JUMP_IF_NOT);
 		uint32_t addPos = chunk.bytecode.size();
 		writeI16(chunk.codeOut, 0);
-		compileBlock(chunk, static_cast<NodeBlock&>(*stat2.block), &ctx);
+		compileBlock(chunk, static_cast<NodeBlock&>(*stat2.thenBlock), &ctx);
+		uint32_t addPos2;
+		if(stat2.elseBlock) {
+			writeUI8(chunk.codeOut, (uint8_t) Opcode::JUMP);
+			addPos2 = chunk.bytecode.size();
+			writeI16(chunk.codeOut, 0);
+		}
 		chunk.fillInJump(addPos);
+		if(stat2.elseBlock) {
+			compileBlock(chunk, static_cast<NodeBlock&>(*stat2.elseBlock), &ctx);
+			chunk.fillInJump(addPos2);
+		}
 		break;
 	} case NodeType::WHILE: {
 		NodeWhile& stat2 = static_cast<NodeWhile&>(stat);

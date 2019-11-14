@@ -35,6 +35,13 @@ void Parser<C>::discardToken(NodeType type) {
 }
 
 template<typename C>
+void Parser<C>::discardSymbol(std::string sym) {
+	if(!isCurSymbol(sym))
+		error("Expected symbol '" + sym + "', got " + curToken->toString());
+	nextToken();
+}
+
+template<typename C>
 bool Parser<C>::isCurSymbol(std::string sym) {
 	if(curToken->type != NodeType::SYM) return false;
 	NodeSymbol* symToken = static_cast<NodeSymbol*>(curToken.get());
@@ -82,11 +89,7 @@ std::unique_ptr<Node> Parser<C>::parseExpr(int prec) {
 			exp = std::unique_ptr<Node>(new NodeUnary(symbol->val, parseExpr(prec2)));
 		} else if(symbol->val == "(") {
 			exp = parseExpr(0);
-			if(isCurSymbol(")")) {
-				nextToken();
-			} else {
-				error("Expected ')' symbol, got " + curToken->toString());
-			}
+			discardSymbol(")");
 		} else {
 			error("Unexpected symbol at start of expression: " + symbol->val);
 		}
@@ -99,11 +102,7 @@ std::unique_ptr<Node> Parser<C>::parseExpr(int prec) {
 		if(infixOperators.find(symbol->val) != infixOperators.end()) {
 			if(symbol->val == "(") {
 				exp = std::unique_ptr<Node>(new NodeBinary("call", std::move(exp), parseExpr(0)));
-				if(isCurSymbol(")")) {
-					nextToken();
-				} else {
-					error("Expected ')' symbol, got " + curToken->toString());
-				}
+				discardSymbol(")");
 			} else {
 				int prec2 = operatorPrecedence[symbol->val];
 				if(rightAssociativeOperators.find(symbol->val) != rightAssociativeOperators.end())
@@ -132,9 +131,7 @@ std::unique_ptr<Node> Parser<C>::parseStatement() {
 		if(idToken->type != NodeType::ID)
 			error("Expected identifier after 'let', got " + nodeTypeDesc(idToken->type));
 		std::string id = static_cast<NodeId*>(idToken.get())->val;
-		if(!isCurSymbol("="))
-			error("Expected '=' after 'let' + identifier, got " + curToken->toString());
-		nextToken();
+		discardSymbol("=");
 		std::unique_ptr<Node> expr = parseExpr();
 		finishStatement();
 		return std::unique_ptr<Node>(new NodeLet(id, std::move(expr)));
@@ -153,11 +150,14 @@ std::unique_ptr<Node> Parser<C>::parseStatement() {
 	} else if(isCurSymbol("if")) {
 		nextToken();
 		std::unique_ptr<Node> cond = parseExpr();
-		if(!isCurSymbol(":"))
-			error("Expected ':' after 'if', got " + curToken->toString());
-		nextToken();
-		std::unique_ptr<Node> block = parseIndentedBlock();
-		return std::unique_ptr<Node>(new NodeIf(std::move(cond), std::move(block)));
+		discardSymbol(":");
+		std::unique_ptr<NodeIf> node(new NodeIf(std::move(cond), parseIndentedBlock()));
+		if(isCurSymbol("else")) {
+			nextToken();
+			discardSymbol(":");
+			node->elseBlock = parseIndentedBlock();
+		}
+		return node;
 	} else if(isCurSymbol("while")) {
 		nextToken();
 		std::unique_ptr<Node> cond = parseExpr();

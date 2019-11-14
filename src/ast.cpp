@@ -112,10 +112,15 @@ NodeLog::NodeLog(std::unique_ptr<Node> exp) : Node(NodeType::LOG), exp(std::move
 
 std::string NodeLog::getDataDesc(std::string prefix) { return " " + exp->toString(prefix); }
 
-NodeIf::NodeIf(std::unique_ptr<Node> cond, std::unique_ptr<Node> block) : Node(NodeType::IF),
-	cond(std::move(cond)), block(std::move(block)) {}
+NodeIf::NodeIf(std::unique_ptr<Node> cond, std::unique_ptr<Node> thenBlock) : Node(NodeType::IF),
+	cond(std::move(cond)), thenBlock(std::move(thenBlock)), elseBlock(nullptr) {}
 
-std::string NodeIf::getDataDesc(std::string prefix) { return " " + cond->toString(prefix) + ": " + block->toString(prefix); }
+std::string NodeIf::getDataDesc(std::string prefix) {
+	if(elseBlock)
+		return " " + cond->toString(prefix) + ": " + thenBlock->toString(prefix) + " else: " + elseBlock->toString(prefix);
+	else
+		return " " + cond->toString(prefix) + ": " + thenBlock->toString(prefix);
+}
 
 NodeWhile::NodeWhile(std::unique_ptr<Node> cond, std::unique_ptr<Node> block) : Node(NodeType::WHILE),
 	cond(std::move(cond)), block(std::move(block)) {}

@@ -73,7 +73,7 @@ std::unique_ptr<Node> Lexer<C>::lexNewline() {
 }
 
 std::unordered_set<std::string> keywords = {
-	"log", "let", "if", "while",
+	"log", "let", "if", "else", "while",
 	"not", "and", "or",
 	"nil", "true", "false"
 };
