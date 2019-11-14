@@ -27,7 +27,8 @@ enum class Opcode : uint8_t {
 	NOT, OR, AND,
 	EQUALS,
 	JUMP_IF_NOT,
-	JUMP
+	JUMP,
+	CALL
 };
 
 std::string opcodeDesc(Opcode opcode);

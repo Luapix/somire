@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <string>
+#include <algorithm>
 
 VM::VM() : globals(new Namespace()), stack(new List()), localBase(0), localCnt(0) {
 	loadStd(*globals);
@@ -115,7 +116,16 @@ void VM::run(Chunk& chunk) {
 		} case Opcode::JUMP:
 			it += readI16(it);
 			break;
-		default:
+		case Opcode::CALL: {
+			uint16_t argCnt = readUI16(it);
+			std::vector<Value> args;
+			args.resize(argCnt);
+			std::copy_n(stack->vec.rbegin(), argCnt, args.rbegin());
+			stack->vec.resize(stack->vec.size() - argCnt);
+			Value func = pop();
+			stack->vec.push_back(func.call(args));
+			break;
+		} default:
 			throw ExecutionError("Opcode " + opcodeDesc(op) + " not yet implemented");
 		}
 		GC::collect();

@@ -18,7 +18,7 @@ enum class NodeType {
 	NL, INDENT, DEDENT, EOI,
 	ID, INT, REAL, STR,
 	SYM,
-	UNI_OP, BIN_OP,
+	UNI_OP, BIN_OP, CALL,
 	LET, SET, EXPR_STAT, LOG, IF, WHILE,
 	BLOCK
 };
@@ -119,6 +119,17 @@ public:
 	
 	const std::string op;
 	const std::unique_ptr<Node> left, right;
+	
+protected:
+	std::string getDataDesc(std::string prefix) override;
+};
+
+class NodeCall : public Node {
+public:
+	NodeCall(std::unique_ptr<Node> func, std::vector<std::unique_ptr<Node>> args);
+	
+	const std::unique_ptr<Node> func;
+	const std::vector<std::unique_ptr<Node>> args;
 	
 protected:
 	std::string getDataDesc(std::string prefix) override;

@@ -18,6 +18,7 @@ std::string nodeTypeDesc(NodeType type) {
 	case NodeType::SYM: return "symbol";
 	case NodeType::UNI_OP: return "unitary";
 	case NodeType::BIN_OP: return "binary";
+	case NodeType::CALL: return "call";
 	case NodeType::LET: return "let";
 	case NodeType::SET: return "set";
 	case NodeType::EXPR_STAT: return "expression statement";
@@ -93,6 +94,20 @@ NodeBinary::NodeBinary(std::string op, std::unique_ptr<Node> left, std::unique_p
 	: Node(NodeType::BIN_OP), op(op), left(std::move(left)), right(std::move(right)) {}
 
 std::string NodeBinary::getDataDesc(std::string prefix) { return " " + op + " " + left->toString(prefix) + " " + right->toString(prefix); }
+
+NodeCall::NodeCall(std::unique_ptr<Node> func, std::vector<std::unique_ptr<Node>> args)
+	: Node(NodeType::CALL), func(std::move(func)), args(std::move(args)) {}
+
+std::string NodeCall::getDataDesc(std::string prefix) {
+	std::string res = " " + func->toString(prefix) + " (";
+	for(uint32_t i = 0; i < args.size(); i++) {
+		res += args[i]->toString();
+		if(i != args.size() - 1)
+			res += ", ";
+	}
+	res += ")";
+	return res;
+}
 
 NodeLet::NodeLet(std::string id, std::unique_ptr<Node> exp)
 	: Node(NodeType::LET), id(id), exp(std::move(exp)) {}

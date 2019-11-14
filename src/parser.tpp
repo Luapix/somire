@@ -101,8 +101,18 @@ std::unique_ptr<Node> Parser<C>::parseExpr(int prec) {
 		std::unique_ptr<NodeSymbol> symbol(static_cast<NodeSymbol*>(nextToken().release()));
 		if(infixOperators.find(symbol->val) != infixOperators.end()) {
 			if(symbol->val == "(") {
-				exp = std::unique_ptr<Node>(new NodeBinary("call", std::move(exp), parseExpr(0)));
-				discardSymbol(")");
+				std::vector<std::unique_ptr<Node>> args;
+				if(!isCurSymbol(")")) {
+					while(true) {
+						args.push_back(parseExpr(0));
+						if(isCurSymbol(")"))
+							break;
+						else
+							discardSymbol(",");
+					}
+				}
+				nextToken();
+				exp = std::unique_ptr<Node>(new NodeCall(std::move(exp), std::move(args)));
 			} else {
 				int prec2 = operatorPrecedence[symbol->val];
 				if(rightAssociativeOperators.find(symbol->val) != rightAssociativeOperators.end())

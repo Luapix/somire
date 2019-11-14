@@ -185,6 +185,15 @@ void Compiler::compileExpression(Chunk& chunk, Node& expr, Context& ctx) {
 			throw CompileError("Unknown binary operator: " + expr2.op);
 		}
 		break;
+	} case NodeType::CALL: {
+		NodeCall& expr2 = static_cast<NodeCall&>(expr);
+		compileExpression(chunk, *expr2.func, ctx);
+		for(auto& arg : expr2.args) {
+			compileExpression(chunk, *arg, ctx);
+		}
+		writeUI8(chunk.codeOut, (uint8_t) Opcode::CALL);
+		writeUI16(chunk.codeOut, (uint16_t) expr2.args.size());
+		break;
 	} default:
 		throw CompileError("Expression type not implemented: " + nodeTypeDesc(expr.type));
 	}
