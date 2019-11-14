@@ -145,11 +145,6 @@ std::unique_ptr<Node> Parser<C>::parseStatement() {
 		std::unique_ptr<Node> expr = parseExpr();
 		finishStatement();
 		return std::unique_ptr<Node>(new NodeLet(id, std::move(expr)));
-	} else if(isCurSymbol("log")) {
-		nextToken();
-		std::unique_ptr<Node> expr = parseExpr();
-		finishStatement();
-		return std::unique_ptr<Node>(new NodeLog(std::move(expr)));
 	} else if(curToken->type == NodeType::ID && peekToken->type == NodeType::SYM && static_cast<NodeSymbol&>(*peekToken).val == "=") {
 		std::unique_ptr<Node> idToken = nextToken();
 		std::string id = static_cast<NodeId*>(idToken.get())->val;

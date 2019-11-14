@@ -84,10 +84,6 @@ void Compiler::compileStatement(Chunk& chunk, Node& stat, Context& ctx) {
 		compileExpression(chunk, *static_cast<NodeExprStat&>(stat).exp, ctx);
 		writeUI8(chunk.codeOut, (uint8_t) Opcode::IGNORE);
 		break;
-	case NodeType::LOG:
-		compileExpression(chunk, *static_cast<NodeExprStat&>(stat).exp, ctx);
-		writeUI8(chunk.codeOut, (uint8_t) Opcode::LOG);
-		break;
 	case NodeType::IF: {
 		NodeIf& stat2 = static_cast<NodeIf&>(stat);
 		compileExpression(chunk, *stat2.cond, ctx);

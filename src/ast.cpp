@@ -22,7 +22,6 @@ std::string nodeTypeDesc(NodeType type) {
 	case NodeType::LET: return "let";
 	case NodeType::SET: return "set";
 	case NodeType::EXPR_STAT: return "expression statement";
-	case NodeType::LOG: return "log";
 	case NodeType::IF: return "if";
 	case NodeType::WHILE: return "while";
 	case NodeType::BLOCK: return "block";
@@ -122,10 +121,6 @@ std::string NodeSet::getDataDesc(std::string prefix) { return " " + id + " = " +
 NodeExprStat::NodeExprStat(std::unique_ptr<Node> exp) : Node(NodeType::EXPR_STAT), exp(std::move(exp)) {}
 
 std::string NodeExprStat::getDataDesc(std::string prefix) { return " " + exp->toString(prefix); }
-
-NodeLog::NodeLog(std::unique_ptr<Node> exp) : Node(NodeType::LOG), exp(std::move(exp)) {}
-
-std::string NodeLog::getDataDesc(std::string prefix) { return " " + exp->toString(prefix); }
 
 NodeIf::NodeIf(std::unique_ptr<Node> cond, std::unique_ptr<Node> thenBlock) : Node(NodeType::IF),
 	cond(std::move(cond)), thenBlock(std::move(thenBlock)), elseBlock(nullptr) {}

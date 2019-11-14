@@ -21,7 +21,6 @@ std::unordered_map<Opcode, std::string> opcodeDescTable = {
 	{Opcode::SET, "SET"},
 	{Opcode::LOCAL, "LOCAL"},
 	{Opcode::GLOBAL, "GLOBAL"},
-	{Opcode::LOG, "LOG"},
 	{Opcode::NOT, "NOT"},
 	{Opcode::AND, "AND"},
 	{Opcode::OR, "OR"},
@@ -136,7 +135,6 @@ std::string Chunk::list() {
 		case Opcode::OR:
 		case Opcode::EQUALS:
 		case Opcode::LET:
-		case Opcode::LOG:
 		default:
 			break;
 		}

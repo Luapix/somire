@@ -103,10 +103,7 @@ void VM::run(Chunk& chunk) {
 			if(it == globals->map.end()) throw ExecutionError("Tring to access undefined global " + name);
 			stack->vec.push_back(it->second);
 			break;
-		} case Opcode::LOG:
-			std::cout << "[log] " << pop().toString() << std::endl;
-			break;
-		case Opcode::JUMP_IF_NOT: {
+		} case Opcode::JUMP_IF_NOT: {
 			Value cond = pop();
 			int16_t relJump = readI16(it);
 			if(!cond.isBool()) throw ExecutionError("Expected boolean in 'if' condition, got " + cond.toString());
