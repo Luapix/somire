@@ -20,6 +20,7 @@ std::unordered_map<Opcode, std::string> opcodeDescTable = {
 	{Opcode::POP, "POP"},
 	{Opcode::SET, "SET"},
 	{Opcode::LOCAL, "LOCAL"},
+	{Opcode::GLOBAL, "GLOBAL"},
 	{Opcode::LOG, "LOG"},
 	{Opcode::NOT, "NOT"},
 	{Opcode::AND, "AND"},
@@ -117,6 +118,7 @@ std::string Chunk::list() {
 		case Opcode::CONSTANT:
 		case Opcode::SET:
 		case Opcode::LOCAL:
+		case Opcode::GLOBAL:
 		case Opcode::POP:
 			res << " " << (int) readUI16(it);
 			break;

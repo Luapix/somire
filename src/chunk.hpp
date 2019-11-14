@@ -22,7 +22,7 @@ enum class Opcode : uint8_t {
 	UNI_MINUS,
 	BIN_PLUS, BIN_MINUS, MULTIPLY, DIVIDE,
 	LET, POP, SET,
-	LOCAL,
+	LOCAL, GLOBAL,
 	LOG,
 	NOT, OR, AND,
 	EQUALS,

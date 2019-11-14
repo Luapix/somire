@@ -17,6 +17,7 @@ std::string valueTypeDesc(ValueType type) {
 	case ValueType::REAL: return "real";
 	case ValueType::LIST: return "list";
 	case ValueType::STR: return "string";
+	case ValueType::INTERNAL: return "internal";
 	default:
 		throw std::runtime_error("Unknown type");
 	}
@@ -169,6 +170,15 @@ std::string Object::toString() {
 	std::stringstream ss;
 	ss << "<" << valueTypeDesc(type) << " " << this << ">";
 	return ss.str();
+}
+
+
+Namespace::Namespace() : Object(ValueType::INTERNAL) {}
+
+void Namespace::markChildren() {
+	for(auto& pair : map) {
+		pair.second.mark();
+	}
 }
 
 

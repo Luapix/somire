@@ -15,6 +15,7 @@ public:
 	uint16_t innerCount();
 	
 	void define(std::string var);
+	bool isDefined(std::string var);
 	uint16_t getIndex(std::string var);
 	
 private:

@@ -13,6 +13,16 @@ void Context::define(std::string var) {
 	innerLocals[var] = next;
 }
 
+bool Context::isDefined(std::string var) {
+	if(isInner(var)) {
+		return true;
+	} else if(parent) {
+		return parent->isDefined(var);
+	} else {
+		return false;
+	}
+}
+
 uint16_t Context::getIndex(std::string var) {
 	if(isInner(var)) {
 		return innerLocals[var];
@@ -144,8 +154,14 @@ void Compiler::compileExpression(Chunk& chunk, Node& expr, Context& ctx) {
 		break;
 	} case NodeType::ID: {
 		NodeId& expr2 = static_cast<NodeId&>(expr);
-		writeUI8(chunk.codeOut, (uint8_t) Opcode::LOCAL);
-		writeUI16(chunk.codeOut, ctx.getIndex(expr2.val));
+		if(ctx.isDefined(expr2.val)) {
+			writeUI8(chunk.codeOut, (uint8_t) Opcode::LOCAL);
+			writeUI16(chunk.codeOut, ctx.getIndex(expr2.val));
+		} else {
+			writeUI8(chunk.codeOut, (uint8_t) Opcode::GLOBAL);
+			writeUI16(chunk.codeOut, chunk.constants->vec.size());
+			chunk.constants->vec.emplace_back(new String(expr2.val));
+		}
 		break;
 	} case NodeType::UNI_OP: {
 		NodeUnary& expr2 = static_cast<NodeUnary&>(expr);

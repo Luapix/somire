@@ -3,7 +3,7 @@
 #include <iostream>
 #include <string>
 
-VM::VM() : stack(new List()), localBase(0), localCnt(0) {}
+VM::VM() : globals(new Namespace()), stack(new List()), localBase(0), localCnt(0) {}
 
 void VM::run(Chunk& chunk) {
 	auto it = chunk.bytecode.begin();
@@ -90,6 +90,15 @@ void VM::run(Chunk& chunk) {
 				throw ExecutionError("Trying to access undefined local");
 			stack->vec.push_back(stack->vec[localBase + localIdx]);
 			//std::cout << "Pushed local n°" << (int) localIdx << " on the stack; top now equal to " << stack->vec.back().toString() << std::endl;
+			break;
+		} case Opcode::GLOBAL: {
+			uint16_t constantIdx = readUI16(it);
+			Value nameValue = chunk.constants->vec.at(constantIdx);
+			if(nameValue.type() != ValueType::STR) throw ExecutionError("Tring to access global by name " + nameValue.toString());
+			std::string name = static_cast<String*>(nameValue.getPointer())->str;
+			auto it = globals->map.find(name);
+			if(it == globals->map.end()) throw ExecutionError("Tring to access undefined global " + name);
+			stack->vec.push_back(it->second);
 			break;
 		} case Opcode::LOG:
 			std::cout << "[log] " << pop().toString() << std::endl;

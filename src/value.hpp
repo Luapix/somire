@@ -16,7 +16,8 @@ enum class ValueType : uint8_t {
 	INT,
 	REAL,
 	LIST,
-	STR
+	STR,
+	INTERNAL
 };
 
 std::string valueTypeDesc(ValueType type);
@@ -88,6 +89,15 @@ public:
 	virtual bool equals(Object& obj);
 	
 	virtual std::string toString();
+};
+
+class Namespace : public Object {
+public:
+	std::unordered_map<std::string, Value> map;
+	
+	Namespace();
+	
+	void markChildren() override;
 };
 
 class List : public Object {

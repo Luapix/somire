@@ -11,6 +11,7 @@ public:
 	void run(Chunk& chunk);
 	
 private:
+	GC::Root<Namespace> globals;
 	GC::Root<List> stack;
 	uint32_t localBase;
 	uint32_t localCnt;
