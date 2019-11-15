@@ -64,6 +64,8 @@ public:
 	Value call(std::vector<Value>& args);
 	
 	bool equals(Value other);
+	bool less(Value other);
+	bool less_or_eq(Value other);
 	
 	std::string toString();
 	

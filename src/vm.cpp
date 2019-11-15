@@ -66,6 +66,16 @@ void VM::run(Chunk& chunk) {
 			Value left = pop();
 			stack->vec.emplace_back(left.equals(right));
 			break;
+		} case Opcode::LESS: {
+			Value right = pop();
+			Value left = pop();
+			stack->vec.emplace_back(left.less(right));
+			break;
+		} case Opcode::LESS_OR_EQ: {
+			Value right = pop();
+			Value left = pop();
+			stack->vec.emplace_back(left.less_or_eq(right));
+			break;
 		} case Opcode::LET: {
 			localCnt++;
 			break;

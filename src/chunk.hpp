@@ -25,6 +25,7 @@ enum class Opcode : uint8_t {
 	LOCAL, GLOBAL,
 	NOT, OR, AND,
 	EQUALS,
+	LESS, LESS_OR_EQ,
 	JUMP_IF_NOT,
 	JUMP,
 	CALL

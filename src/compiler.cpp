@@ -122,7 +122,8 @@ void Compiler::compileStatement(Chunk& chunk, Node& stat, Context& ctx) {
 
 std::unordered_map<std::string, Opcode> binaryOps = {
 	{"+", Opcode::BIN_PLUS}, {"-", Opcode::BIN_MINUS}, {"*", Opcode::MULTIPLY}, {"/", Opcode::DIVIDE},
-	{"and", Opcode::AND}, {"or", Opcode::OR}, {"==", Opcode::EQUALS}
+	{"and", Opcode::AND}, {"or", Opcode::OR},
+	{"==", Opcode::EQUALS}, {"<", Opcode::LESS}, {"<=", Opcode::LESS_OR_EQ}
 };
 
 void Compiler::compileExpression(Chunk& chunk, Node& expr, Context& ctx) {
@@ -177,6 +178,15 @@ void Compiler::compileExpression(Chunk& chunk, Node& expr, Context& ctx) {
 		auto it = binaryOps.find(expr2.op);
 		if(it != binaryOps.end()) {
 			writeUI8(chunk.codeOut, (uint8_t) it->second);
+		} else if(expr2.op == "!=") {
+			writeUI8(chunk.codeOut, (uint8_t) Opcode::EQUALS);
+			writeUI8(chunk.codeOut, (uint8_t) Opcode::NOT);
+		} else if(expr2.op == ">") {
+			writeUI8(chunk.codeOut, (uint8_t) Opcode::LESS_OR_EQ);
+			writeUI8(chunk.codeOut, (uint8_t) Opcode::NOT);
+		} else if(expr2.op == ">=") {
+			writeUI8(chunk.codeOut, (uint8_t) Opcode::LESS);
+			writeUI8(chunk.codeOut, (uint8_t) Opcode::NOT);
 		} else {
 			throw CompileError("Unknown binary operator: " + expr2.op);
 		}

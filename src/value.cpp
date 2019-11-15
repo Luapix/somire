@@ -120,13 +120,25 @@ Value Value::call(std::vector<Value>& args) {
 }
 
 bool Value::equals(Value other) {
-	if(type() != other.type()) return false;
-	if(isNil()) return true;
+	if(isInt() && other.isInt()) return getInt() == other.getInt();
+	else if(isNumeric() && other.isNumeric()) return convertToDouble() == other.convertToDouble();
+	else if(type() != other.type()) return false;
+	else if(isNil()) return true;
 	else if(isBool()) return getBool() == other.getBool();
-	else if(isInt()) return getInt() == other.getInt();
-	else if(isReal()) return getReal() == other.getReal();
 	else if(isPointer()) return getPointer()->equals(*other.getPointer());
 	else throw std::runtime_error("Invalid value");
+}
+
+bool Value::less(Value other) {
+	if(isInt() && other.isInt()) return getInt() < other.getInt();
+	else if(isNumeric() && other.isNumeric()) return convertToDouble() < other.convertToDouble();
+	else throw ExecutionError("Cannot test if " + valueTypeDesc(type()) + " is less than " + valueTypeDesc(other.type()));
+}
+
+bool Value::less_or_eq(Value other) {
+	if(isInt() && other.isInt()) return getInt() <= other.getInt();
+	else if(isNumeric() && other.isNumeric()) return convertToDouble() <= other.convertToDouble();
+	else throw ExecutionError("Cannot test if " + valueTypeDesc(type()) + " is less than or equal to " + valueTypeDesc(other.type()));
 }
 
 std::string Value::toString() {
