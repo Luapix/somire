@@ -1,6 +1,6 @@
 
 CC     := g++
-CFLAGS := -O3 -MD -MP -std=c++11 -Ic:/lib/utf8-cpp-2.3.4
+CFLAGS := -MD -MP -std=c++11 -Ic:/lib/utf8-cpp-2.3.4
 
 SRC_FILES := $(wildcard src/*.cpp) src/uni_data.cpp
 OBJ_FILES := $(patsubst src/%.cpp,build/%.o,$(SRC_FILES))
@@ -19,6 +19,9 @@ clean:
 	rm -rf build
 	mkdir build
 	rm -f $(OUTPUT)
+
+release: CFLAGS := -O3 $(CFLAGS)
+release: $(OUTPUT)
 
 debug: CFLAGS := -g $(CFLAGS)
 debug: $(OUTPUT)
