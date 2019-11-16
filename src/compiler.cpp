@@ -47,73 +47,78 @@ uint16_t Context::nextIndex() {
 
 Compiler::Compiler() {}
 
-std::unique_ptr<Chunk> Compiler::compileChunk(std::unique_ptr<Node> ast) {
-	std::unique_ptr<Chunk> chunk(new Chunk());
+std::unique_ptr<Chunk> Compiler::compileProgram(std::unique_ptr<Node> ast) {
+	curChunk = std::unique_ptr<Chunk>(new Chunk());
 	if(ast->type != NodeType::BLOCK)
 		throw CompileError("Expected block to compile, got " + nodeTypeDesc(ast->type));
-	compileBlock(*chunk, static_cast<NodeBlock&>(*ast));
-	return chunk;
+	compileFunction(static_cast<NodeBlock&>(*ast));
+	return std::move(curChunk);
 }
 
-void Compiler::compileBlock(Chunk& chunk, NodeBlock& block, Context* parent) {
+void Compiler::compileFunction(NodeBlock& block) {
+	curChunk->functions.emplace_back();
+	compileBlock(curChunk->functions.back(), block);
+}
+
+void Compiler::compileBlock(FunctionChunk& curFunc, NodeBlock& block, Context* parent) {
 	Context ctx(parent);
 	for(const std::unique_ptr<Node>& stat : block.statements) {
-		compileStatement(chunk, *stat, ctx);
+		compileStatement(curFunc, *stat, ctx);
 	}
 	if(ctx.innerCount() > 0) { // pop locals
-		writeUI8(chunk.codeOut, (uint8_t) Opcode::POP);
-		writeUI16(chunk.codeOut, ctx.innerCount());
+		writeUI8(curFunc.codeOut, (uint8_t) Opcode::POP);
+		writeUI16(curFunc.codeOut, ctx.innerCount());
 	}
 }
 
-void Compiler::compileStatement(Chunk& chunk, Node& stat, Context& ctx) {
+void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx) {
 	switch(stat.type) {
 	case NodeType::LET: {
 		NodeLet& stat2 = static_cast<NodeLet&>(stat);
 		ctx.define(stat2.id);
-		compileExpression(chunk, *stat2.exp, ctx);
-		writeUI8(chunk.codeOut, (uint8_t) Opcode::LET);
+		compileExpression(curFunc, *stat2.exp, ctx);
+		writeUI8(curFunc.codeOut, (uint8_t) Opcode::LET);
 		break;
 	} case NodeType::SET: {
 		NodeSet& stat2 = static_cast<NodeSet&>(stat);
-		compileExpression(chunk, *stat2.exp, ctx);
-		writeUI8(chunk.codeOut, (uint8_t) Opcode::SET);
-		writeUI16(chunk.codeOut, ctx.getIndex(stat2.id));
+		compileExpression(curFunc, *stat2.exp, ctx);
+		writeUI8(curFunc.codeOut, (uint8_t) Opcode::SET);
+		writeUI16(curFunc.codeOut, ctx.getIndex(stat2.id));
 		break;
 	} case NodeType::EXPR_STAT:
-		compileExpression(chunk, *static_cast<NodeExprStat&>(stat).exp, ctx);
-		writeUI8(chunk.codeOut, (uint8_t) Opcode::IGNORE);
+		compileExpression(curFunc, *static_cast<NodeExprStat&>(stat).exp, ctx);
+		writeUI8(curFunc.codeOut, (uint8_t) Opcode::IGNORE);
 		break;
 	case NodeType::IF: {
 		NodeIf& stat2 = static_cast<NodeIf&>(stat);
-		compileExpression(chunk, *stat2.cond, ctx);
-		writeUI8(chunk.codeOut, (uint8_t) Opcode::JUMP_IF_NOT);
-		uint32_t addPos = chunk.bytecode.size();
-		writeI16(chunk.codeOut, 0);
-		compileBlock(chunk, static_cast<NodeBlock&>(*stat2.thenBlock), &ctx);
+		compileExpression(curFunc, *stat2.cond, ctx);
+		writeUI8(curFunc.codeOut, (uint8_t) Opcode::JUMP_IF_NOT);
+		uint32_t addPos = curFunc.code.size();
+		writeI16(curFunc.codeOut, 0);
+		compileBlock(curFunc, static_cast<NodeBlock&>(*stat2.thenBlock), &ctx);
 		uint32_t addPos2;
 		if(stat2.elseBlock) {
-			writeUI8(chunk.codeOut, (uint8_t) Opcode::JUMP);
-			addPos2 = chunk.bytecode.size();
-			writeI16(chunk.codeOut, 0);
+			writeUI8(curFunc.codeOut, (uint8_t) Opcode::JUMP);
+			addPos2 = curFunc.code.size();
+			writeI16(curFunc.codeOut, 0);
 		}
-		chunk.fillInJump(addPos);
+		curFunc.fillInJump(addPos);
 		if(stat2.elseBlock) {
-			compileBlock(chunk, static_cast<NodeBlock&>(*stat2.elseBlock), &ctx);
-			chunk.fillInJump(addPos2);
+			compileBlock(curFunc, static_cast<NodeBlock&>(*stat2.elseBlock), &ctx);
+			curFunc.fillInJump(addPos2);
 		}
 		break;
 	} case NodeType::WHILE: {
 		NodeWhile& stat2 = static_cast<NodeWhile&>(stat);
-		uint32_t before = chunk.bytecode.size();
-		compileExpression(chunk, *stat2.cond, ctx);
-		writeUI8(chunk.codeOut, (uint8_t) Opcode::JUMP_IF_NOT);
-		uint32_t addPos = chunk.bytecode.size();
-		writeI16(chunk.codeOut, 0);
-		compileBlock(chunk, static_cast<NodeBlock&>(*stat2.block), &ctx);
-		writeUI8(chunk.codeOut, (uint8_t) Opcode::JUMP);
-		writeI16(chunk.codeOut, computeJump(chunk.bytecode.size() + 2, before));
-		chunk.fillInJump(addPos);
+		uint32_t before = curFunc.code.size();
+		compileExpression(curFunc, *stat2.cond, ctx);
+		writeUI8(curFunc.codeOut, (uint8_t) Opcode::JUMP_IF_NOT);
+		uint32_t addPos = curFunc.code.size();
+		writeI16(curFunc.codeOut, 0);
+		compileBlock(curFunc, static_cast<NodeBlock&>(*stat2.block), &ctx);
+		writeUI8(curFunc.codeOut, (uint8_t) Opcode::JUMP);
+		writeI16(curFunc.codeOut, computeJump(curFunc.code.size() + 2, before));
+		curFunc.fillInJump(addPos);
 		break;
 	} default:
 		throw CompileError("Statement type not implemented: " + nodeTypeDesc(stat.type));
@@ -126,25 +131,25 @@ std::unordered_map<std::string, Opcode> binaryOps = {
 	{"==", Opcode::EQUALS}, {"<", Opcode::LESS}, {"<=", Opcode::LESS_OR_EQ}
 };
 
-void Compiler::compileExpression(Chunk& chunk, Node& expr, Context& ctx) {
+void Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& ctx) {
 	switch(expr.type) {
 	case NodeType::INT:
-		compileConstant(chunk, Value(static_cast<NodeInt&>(expr).val));
+		compileConstant(curFunc, Value(static_cast<NodeInt&>(expr).val));
 		break;
 	case NodeType::REAL:
-		compileConstant(chunk, Value(static_cast<NodeReal&>(expr).val));
+		compileConstant(curFunc, Value(static_cast<NodeReal&>(expr).val));
 		break;
 	case NodeType::STR:
-		compileConstant(chunk, Value(new String(static_cast<NodeString&>(expr).val)));
+		compileConstant(curFunc, Value(new String(static_cast<NodeString&>(expr).val)));
 		break;
 	case NodeType::SYM: {
 		NodeSymbol& expr2 = static_cast<NodeSymbol&>(expr);
 		if(expr2.val == "nil") {
-			compileConstant(chunk, Value());
+			compileConstant(curFunc, Value());
 		} else if(expr2.val == "true") {
-			compileConstant(chunk, Value(true));
+			compileConstant(curFunc, Value(true));
 		} else if(expr2.val == "false") {
-			compileConstant(chunk, Value(false));
+			compileConstant(curFunc, Value(false));
 		} else {
 			throw CompileError("Unexpected keyword in expression: " + expr2.val);
 		}
@@ -152,61 +157,61 @@ void Compiler::compileExpression(Chunk& chunk, Node& expr, Context& ctx) {
 	} case NodeType::ID: {
 		NodeId& expr2 = static_cast<NodeId&>(expr);
 		if(ctx.isDefined(expr2.val)) {
-			writeUI8(chunk.codeOut, (uint8_t) Opcode::LOCAL);
-			writeUI16(chunk.codeOut, ctx.getIndex(expr2.val));
+			writeUI8(curFunc.codeOut, (uint8_t) Opcode::LOCAL);
+			writeUI16(curFunc.codeOut, ctx.getIndex(expr2.val));
 		} else {
-			writeUI8(chunk.codeOut, (uint8_t) Opcode::GLOBAL);
-			writeUI16(chunk.codeOut, chunk.constants->vec.size());
-			chunk.constants->vec.emplace_back(new String(expr2.val));
+			writeUI8(curFunc.codeOut, (uint8_t) Opcode::GLOBAL);
+			writeUI16(curFunc.codeOut, curChunk->constants->vec.size());
+			curChunk->constants->vec.emplace_back(new String(expr2.val));
 		}
 		break;
 	} case NodeType::UNI_OP: {
 		NodeUnary& expr2 = static_cast<NodeUnary&>(expr);
-		compileExpression(chunk, *expr2.val, ctx);
+		compileExpression(curFunc, *expr2.val, ctx);
 		if(expr2.op == "-") {
-			writeUI8(chunk.codeOut, (uint8_t) Opcode::UNI_MINUS);
+			writeUI8(curFunc.codeOut, (uint8_t) Opcode::UNI_MINUS);
 		} else if(expr2.op == "not") {
-			writeUI8(chunk.codeOut, (uint8_t) Opcode::NOT);
+			writeUI8(curFunc.codeOut, (uint8_t) Opcode::NOT);
 		} else {
 			throw CompileError("Unknown unary operator: " + expr2.op);
 		}
 		break;
 	} case NodeType::BIN_OP: {
 		NodeBinary& expr2 = static_cast<NodeBinary&>(expr);
-		compileExpression(chunk, *expr2.left, ctx);
-		compileExpression(chunk, *expr2.right, ctx);
+		compileExpression(curFunc, *expr2.left, ctx);
+		compileExpression(curFunc, *expr2.right, ctx);
 		auto it = binaryOps.find(expr2.op);
 		if(it != binaryOps.end()) {
-			writeUI8(chunk.codeOut, (uint8_t) it->second);
+			writeUI8(curFunc.codeOut, (uint8_t) it->second);
 		} else if(expr2.op == "!=") {
-			writeUI8(chunk.codeOut, (uint8_t) Opcode::EQUALS);
-			writeUI8(chunk.codeOut, (uint8_t) Opcode::NOT);
+			writeUI8(curFunc.codeOut, (uint8_t) Opcode::EQUALS);
+			writeUI8(curFunc.codeOut, (uint8_t) Opcode::NOT);
 		} else if(expr2.op == ">") {
-			writeUI8(chunk.codeOut, (uint8_t) Opcode::LESS_OR_EQ);
-			writeUI8(chunk.codeOut, (uint8_t) Opcode::NOT);
+			writeUI8(curFunc.codeOut, (uint8_t) Opcode::LESS_OR_EQ);
+			writeUI8(curFunc.codeOut, (uint8_t) Opcode::NOT);
 		} else if(expr2.op == ">=") {
-			writeUI8(chunk.codeOut, (uint8_t) Opcode::LESS);
-			writeUI8(chunk.codeOut, (uint8_t) Opcode::NOT);
+			writeUI8(curFunc.codeOut, (uint8_t) Opcode::LESS);
+			writeUI8(curFunc.codeOut, (uint8_t) Opcode::NOT);
 		} else {
 			throw CompileError("Unknown binary operator: " + expr2.op);
 		}
 		break;
 	} case NodeType::CALL: {
 		NodeCall& expr2 = static_cast<NodeCall&>(expr);
-		compileExpression(chunk, *expr2.func, ctx);
+		compileExpression(curFunc, *expr2.func, ctx);
 		for(auto& arg : expr2.args) {
-			compileExpression(chunk, *arg, ctx);
+			compileExpression(curFunc, *arg, ctx);
 		}
-		writeUI8(chunk.codeOut, (uint8_t) Opcode::CALL);
-		writeUI16(chunk.codeOut, (uint16_t) expr2.args.size());
+		writeUI8(curFunc.codeOut, (uint8_t) Opcode::CALL);
+		writeUI16(curFunc.codeOut, (uint16_t) expr2.args.size());
 		break;
 	} default:
 		throw CompileError("Expression type not implemented: " + nodeTypeDesc(expr.type));
 	}
 }
 
-void Compiler::compileConstant(Chunk& chunk, Value val) {
-	writeUI8(chunk.codeOut, (uint8_t) Opcode::CONSTANT);
-	writeUI16(chunk.codeOut, (uint16_t) chunk.constants->vec.size());
-	chunk.constants->vec.push_back(val);
+void Compiler::compileConstant(FunctionChunk& curFunc, Value val) {
+	writeUI8(curFunc.codeOut, (uint8_t) Opcode::CONSTANT);
+	writeUI16(curFunc.codeOut, (uint16_t) curChunk->constants->vec.size());
+	curChunk->constants->vec.push_back(val);
 }

@@ -29,11 +29,14 @@ class Compiler {
 public:
 	Compiler();
 	
-	std::unique_ptr<Chunk> compileChunk(std::unique_ptr<Node> ast);
+	std::unique_ptr<Chunk> compileProgram(std::unique_ptr<Node> ast);
 	
 private:
-	void compileBlock(Chunk& chunk, NodeBlock& block, Context* parent = nullptr);
-	void compileStatement(Chunk& chunk, Node& stat, Context& ctx);
-	void compileExpression(Chunk& chunk, Node& expr, Context& ctx);
-	void compileConstant(Chunk& chunk, Value val);
+	std::unique_ptr<Chunk> curChunk;
+	
+	void compileFunction(NodeBlock& block);
+	void compileBlock(FunctionChunk& curFunc, NodeBlock& block, Context* parent = nullptr);
+	void compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx);
+	void compileExpression(FunctionChunk& curFunc, Node& expr, Context& ctx);
+	void compileConstant(FunctionChunk& curFunc, Value val);
 };

@@ -29,7 +29,7 @@ bool parse(std::string inputPath, std::unique_ptr<Node>& program) {
 bool compile(std::unique_ptr<Node> program, std::unique_ptr<Chunk>& chunk) {
 	Compiler compiler;
 	try {
-		chunk = compiler.compileChunk(std::move(program));
+		chunk = compiler.compileProgram(std::move(program));
 	} catch(CompileError& e) {
 		std::cout << e.what() << std::endl;
 		return false;

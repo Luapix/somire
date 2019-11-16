@@ -46,13 +46,15 @@ int16_t computeJump(uint32_t from, uint32_t to) {
 	return (int16_t) relJmp;
 }
 
-Chunk::Chunk() : constants(new List()), codeOut(bytecode) {}
+FunctionChunk::FunctionChunk() : codeOut(code) {}
 
-void Chunk::fillInJump(uint32_t pos) {
-	int16_t x = computeJump(pos + 2, bytecode.size());
-	auto it = &bytecode[pos];
+void FunctionChunk::fillInJump(uint32_t pos) {
+	int16_t x = computeJump(pos + 2, code.size());
+	auto it = &code[pos];
 	writeI16(it, x);
 }
+
+Chunk::Chunk() : constants(new List()) {}
 
 void Chunk::writeToFile(std::ofstream& fs) {
 	fs.write((const char*) magicBytes.data(), magicBytes.size());
@@ -60,7 +62,7 @@ void Chunk::writeToFile(std::ofstream& fs) {
 	std::ostream_iterator<char> it(fs);
 	
 	if(constants->vec.size() > 0xffff)
-		throw std::runtime_error("Too many constants in chunk");
+		throw std::runtime_error("Too many constants in program");
 	uint16_t constantCnt = (uint16_t) constants->vec.size();
 	writeUI16(it, constantCnt);
 	
@@ -68,7 +70,13 @@ void Chunk::writeToFile(std::ofstream& fs) {
 		writeConstantToFile(it, cnst);
 	}
 	
-	fs.write((const char*) bytecode.data(), bytecode.size());
+	for(FunctionChunk& func : functions) {
+		if(func.code.size() > 0xffff)
+			throw std::runtime_error("Function too large");
+		uint16_t codeSize = (uint16_t) func.code.size();
+		writeUI16(it, codeSize);
+		fs.write((const char*) func.code.data(), codeSize);
+	}
 }
 
 std::unique_ptr<Chunk> Chunk::loadFromFile(std::ifstream& fs) {
@@ -92,13 +100,12 @@ std::unique_ptr<Chunk> Chunk::loadFromFile(std::ifstream& fs) {
 		chunk->loadConstantFromFile(it);
 	}
 	
-	size_t bytecodeStart = (size_t) fs.tellg();
-	fs.seekg(0, std::ios::end);
-	size_t size = (size_t) fs.tellg() - bytecodeStart;
-	chunk->bytecode.resize(size);
-	
-	fs.seekg(bytecodeStart, std::ios::beg);
-	fs.read((char*) chunk->bytecode.data(), size);
+	while(fs.peek() != EOF) {
+		chunk->functions.emplace_back();
+		uint16_t codeSize = readUI16(it);
+		chunk->functions.back().code.resize(codeSize);
+		fs.read((char*) chunk->functions.back().code.data(), codeSize);
+	}
 	
 	return chunk;
 }
@@ -111,34 +118,37 @@ std::string Chunk::list() {
 		res << i << ": " << constants->vec[i].toString() << "\n";
 	}
 	
-	res << "\nCode:\n";
-	auto it = bytecode.begin();
-	while(it != bytecode.end()) {
-		Opcode op = static_cast<Opcode>(readUI8(it));
-		res << opcodeDesc(op);
-		switch(op) {
-		case Opcode::CONSTANT:
-		case Opcode::SET:
-		case Opcode::LOCAL:
-		case Opcode::GLOBAL:
-		case Opcode::POP:
-		case Opcode::CALL:
-			res << " " << (int) readUI16(it);
-			break;
-		case Opcode::JUMP_IF_NOT:
-		case Opcode::JUMP:
-			res << " " << (int) readI16(it);
-			break;
-		case Opcode::IGNORE:
-		case Opcode::UNI_MINUS:
-		case Opcode::BIN_PLUS:
-		case Opcode::NOT:
-		case Opcode::AND:
-		case Opcode::OR:
-		case Opcode::EQUALS:
-		case Opcode::LET:
-		default:
-			break;
+	for(uint32_t i = 0; i < functions.size(); i++) {
+		res << "\nFunction prototype " + std::to_string(i) + ":\n";
+		auto it = functions[i].code.begin();
+		while(it != functions[i].code.end()) {
+			Opcode op = static_cast<Opcode>(readUI8(it));
+			res << opcodeDesc(op);
+			switch(op) {
+			case Opcode::CONSTANT:
+			case Opcode::SET:
+			case Opcode::LOCAL:
+			case Opcode::GLOBAL:
+			case Opcode::POP:
+			case Opcode::CALL:
+				res << " " << (int) readUI16(it);
+				break;
+			case Opcode::JUMP_IF_NOT:
+			case Opcode::JUMP:
+				res << " " << (int) readI16(it);
+				break;
+			case Opcode::IGNORE:
+			case Opcode::UNI_MINUS:
+			case Opcode::BIN_PLUS:
+			case Opcode::NOT:
+			case Opcode::AND:
+			case Opcode::OR:
+			case Opcode::EQUALS:
+			case Opcode::LET:
+			default:
+				break;
+			}
+			res << "\n";
 		}
 		res << "\n";
 	}

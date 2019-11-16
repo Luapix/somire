@@ -9,8 +9,8 @@ VM::VM() : globals(new Namespace()), stack(new List()), localBase(0), localCnt(0
 }
 
 void VM::run(Chunk& chunk) {
-	auto it = chunk.bytecode.begin();
-	while(it != chunk.bytecode.end()) {
+	auto it = chunk.functions[0].code.begin();
+	while(it != chunk.functions[0].code.end()) {
 		Opcode op = (Opcode) readUI8(it);
 		switch(op) {
 		case Opcode::IGNORE:

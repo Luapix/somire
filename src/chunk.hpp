@@ -61,15 +61,22 @@ double readDouble(I& it);
 
 int16_t computeJump(uint32_t from, uint32_t to);
 
+class FunctionChunk {
+public:
+	std::vector<uint8_t> code;
+	std::back_insert_iterator<std::vector<uint8_t>> codeOut;
+	
+	FunctionChunk();
+	
+	void fillInJump(uint32_t pos);
+};
+
 class Chunk {
 public:
 	GC::Root<List> constants;
-	std::vector<uint8_t> bytecode;
-	std::back_insert_iterator<std::vector<uint8_t>> codeOut;
+	std::vector<FunctionChunk> functions;
 	
 	Chunk();
-	
-	void fillInJump(uint32_t pos);
 	
 	void writeToFile(std::ofstream& fs);
 	
