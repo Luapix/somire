@@ -142,9 +142,30 @@ std::unique_ptr<Node> Parser<C>::parseStatement() {
 		if(idToken->type != NodeType::ID)
 			error("Expected identifier after 'let', got " + nodeTypeDesc(idToken->type));
 		std::string id = static_cast<NodeId*>(idToken.get())->val;
-		discardSymbol("=");
-		std::unique_ptr<Node> expr = parseExpr();
-		finishStatement();
+		std::unique_ptr<Node> expr;
+		if(isCurSymbol("(")) {
+			nextToken();
+			std::vector<std::string> argNames;
+			if(!isCurSymbol(")")) {
+				while(true) {
+					if(curToken->type != NodeType::ID)
+						error("Expected identifier in argument list, got " + nodeTypeDesc(curToken->type));
+					std::unique_ptr<Node> argToken = nextToken();
+					argNames.push_back(static_cast<NodeId*>(argToken.get())->val);
+					if(isCurSymbol(")"))
+						break;
+					else
+						discardSymbol(",");
+				}
+			}
+			nextToken();
+			discardSymbol(":");
+			expr = std::unique_ptr<Node>(new NodeFunction(argNames, parseIndentedBlock()));
+		} else {
+			discardSymbol("=");
+			expr = parseExpr();
+			finishStatement();
+		}
 		return std::unique_ptr<Node>(new NodeLet(id, std::move(expr)));
 	} else if(curToken->type == NodeType::ID && peekToken->type == NodeType::SYM && static_cast<NodeSymbol&>(*peekToken).val == "=") {
 		std::unique_ptr<Node> idToken = nextToken();

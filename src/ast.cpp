@@ -24,6 +24,7 @@ std::string nodeTypeDesc(NodeType type) {
 	case NodeType::EXPR_STAT: return "expression statement";
 	case NodeType::IF: return "if";
 	case NodeType::WHILE: return "while";
+	case NodeType::FUNC: return "function";
 	case NodeType::BLOCK: return "block";
 	default:
 		throw std::runtime_error("Unknown node type");
@@ -136,6 +137,19 @@ NodeWhile::NodeWhile(std::unique_ptr<Node> cond, std::unique_ptr<Node> block) : 
 	cond(std::move(cond)), block(std::move(block)) {}
 
 std::string NodeWhile::getDataDesc(std::string prefix) { return " " + cond->toString(prefix) + ": " + block->toString(prefix); }
+
+NodeFunction::NodeFunction(std::vector<std::string> argNames, std::unique_ptr<Node> block)
+	: Node(NodeType::FUNC), argNames(argNames), block(std::move(block)) {}
+
+std::string NodeFunction::getDataDesc(std::string prefix) {
+	std::string res = "(";
+	for(uint32_t i = 0; i < argNames.size(); i++) {
+		res += argNames[i];
+		if(i != argNames.size()-1)
+			res += ", ";
+	}
+	return res + "): " + block->toString(prefix);
+}
 
 NodeBlock::NodeBlock(std::vector<std::unique_ptr<Node>> statements)
 	: Node(NodeType::BLOCK), statements(std::move(statements)) {}

@@ -20,6 +20,7 @@ enum class NodeType {
 	SYM,
 	UNI_OP, BIN_OP, CALL,
 	LET, SET, EXPR_STAT, IF, WHILE,
+	FUNC,
 	BLOCK
 };
 
@@ -184,6 +185,17 @@ public:
 	NodeWhile(std::unique_ptr<Node> cond, std::unique_ptr<Node> block);
 	
 	const std::unique_ptr<Node> cond;
+	const std::unique_ptr<Node> block;
+	
+protected:
+	std::string getDataDesc(std::string prefix) override;
+};
+
+class NodeFunction : public Node {
+public:
+	NodeFunction(std::vector<std::string> argNames, std::unique_ptr<Node> block);
+	
+	const std::vector<std::string> argNames;
 	const std::unique_ptr<Node> block;
 	
 protected:
