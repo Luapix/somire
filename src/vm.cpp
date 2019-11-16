@@ -4,17 +4,25 @@
 #include <string>
 #include <algorithm>
 
-VM::VM() : globals(new Namespace()), stack(new List()), localBase(0), localCnt(0) {
+ExecutionRecord::ExecutionRecord(uint32_t localBase, uint32_t localCnt) : localBase(localBase), localCnt(localCnt) {}
+
+VM::VM() : globals(new Namespace()), stack(new List()) {
 	loadStd(*globals);
 }
 
 void VM::run(Chunk& chunk) {
-	auto it = chunk.functions[0].code.begin();
-	while(it != chunk.functions[0].code.end()) {
+	calls.emplace_back(0, 0);
+	runFunction(chunk, 0);
+	calls.pop_back();
+}
+
+void VM::runFunction(Chunk& chunk, uint16_t funcIdx) {
+	auto it = chunk.functions[funcIdx]->code.begin();
+	while(it != chunk.functions[funcIdx]->code.end()) {
 		Opcode op = (Opcode) readUI8(it);
 		switch(op) {
 		case Opcode::IGNORE:
-			stack->vec.resize(localBase + localCnt);
+			stack->vec.resize(calls.back().localBase + calls.back().localCnt);
 			break;
 		case Opcode::CONSTANT: {
 			uint16_t constantIdx = readUI16(it);
@@ -77,25 +85,25 @@ void VM::run(Chunk& chunk) {
 			stack->vec.emplace_back(left.less_or_eq(right));
 			break;
 		} case Opcode::LET: {
-			localCnt++;
+			calls.back().localCnt++;
 			break;
 		} case Opcode::POP: {
 			uint16_t amount = readUI16(it);
-			localCnt -= amount;
-			stack->vec.resize(localBase + localCnt);
+			calls.back().localCnt -= amount;
+			stack->vec.resize(calls.back().localBase + calls.back().localCnt);
 			break;
 		} case Opcode::SET: {
 			uint16_t localIdx = readUI16(it);
-			if(localIdx >= localCnt)
+			if(localIdx >= calls.back().localCnt)
 				throw ExecutionError("Trying to assign to undefined local");
 			Value val = pop();
-			stack->vec[localBase + localIdx] = val;
+			stack->vec[calls.back().localBase + localIdx] = val;
 			break;
 		} case Opcode::LOCAL: {
 			uint16_t localIdx = readUI16(it);
-			if(localIdx >= localCnt)
+			if(localIdx >= calls.back().localCnt)
 				throw ExecutionError("Trying to access undefined local");
-			stack->vec.push_back(stack->vec[localBase + localIdx]);
+			stack->vec.push_back(stack->vec[calls.back().localBase + localIdx]);
 			break;
 		} case Opcode::GLOBAL: {
 			uint16_t constantIdx = readUI16(it);
@@ -118,14 +126,36 @@ void VM::run(Chunk& chunk) {
 			break;
 		case Opcode::CALL: {
 			uint16_t argCnt = readUI16(it);
-			std::vector<Value> args;
-			args.resize(argCnt);
-			std::copy_n(stack->vec.rbegin(), argCnt, args.rbegin());
-			stack->vec.resize(stack->vec.size() - argCnt);
+			
 			Value func = pop();
-			stack->vec.push_back(func.call(args));
+			ValueType type = func.type();
+			
+			if(type == ValueType::C_FUNC) {
+				// Pop the arguments off the stack
+				std::vector<Value> args;
+				args.resize(argCnt);
+				std::copy_n(stack->vec.rbegin(), argCnt, args.rbegin());
+				stack->vec.resize(stack->vec.size() - argCnt);
+				
+				Value res = static_cast<CFunction*>(func.getPointer())->func(args);
+				stack->vec.push_back(res);
+			} else if(type == ValueType::FUNC) {
+				// We leave the arguments on the stack, they will become locals
+				Function* func2 = static_cast<Function*>(func.getPointer());
+				if(argCnt != func2->argCnt)
+					throw ExecutionError("Expected " + std::to_string(func2->argCnt) + " arguments, got " + std::to_string(argCnt));
+				calls.emplace_back(stack->vec.size() - argCnt, argCnt);
+				runFunction(chunk, func2->protoIdx);
+				calls.pop_back();
+				stack->vec.emplace_back(); // For now, Somiré functions have no way of returning a value
+			} else {
+				throw ExecutionError("Cannot call " + valueTypeDesc(type));
+			}
 			break;
-		} default:
+		} case Opcode::MAKE_FUNC:
+			stack->vec.emplace_back(new Function(readUI16(it), readUI16(it)));
+			break;
+		default:
 			throw ExecutionError("Opcode " + opcodeDesc(op) + " not yet implemented");
 		}
 		GC::step();

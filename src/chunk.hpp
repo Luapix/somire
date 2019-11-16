@@ -62,12 +62,16 @@ double readDouble(I& it);
 
 int16_t computeJump(uint32_t from, uint32_t to);
 
+// /!\ Very touchy!
+// For codeOut to remain valid, this class should not be copied,
+// and code should not be reallocated outside of using codeOut.
 class FunctionChunk {
 public:
 	std::vector<uint8_t> code;
 	std::back_insert_iterator<std::vector<uint8_t>> codeOut;
 	
 	FunctionChunk();
+	FunctionChunk(const FunctionChunk&) = delete;
 	
 	void fillInJump(uint32_t pos);
 };
@@ -75,7 +79,7 @@ public:
 class Chunk {
 public:
 	GC::Root<List> constants;
-	std::vector<FunctionChunk> functions;
+	std::vector<std::unique_ptr<FunctionChunk>> functions;
 	
 	Chunk();
 	

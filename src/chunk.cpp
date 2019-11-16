@@ -71,12 +71,12 @@ void Chunk::writeToFile(std::ofstream& fs) {
 		writeConstantToFile(it, cnst);
 	}
 	
-	for(FunctionChunk& func : functions) {
-		if(func.code.size() > 0xffff)
+	for(std::unique_ptr<FunctionChunk>& func : functions) {
+		if(func->code.size() > 0xffff)
 			throw std::runtime_error("Function too large");
-		uint16_t codeSize = (uint16_t) func.code.size();
+		uint16_t codeSize = (uint16_t) func->code.size();
 		writeUI16(it, codeSize);
-		fs.write((const char*) func.code.data(), codeSize);
+		fs.write((const char*) func->code.data(), codeSize);
 	}
 }
 
@@ -102,10 +102,10 @@ std::unique_ptr<Chunk> Chunk::loadFromFile(std::ifstream& fs) {
 	}
 	
 	while(fs.peek() != EOF) {
-		chunk->functions.emplace_back();
+		chunk->functions.emplace_back(new FunctionChunk());
 		uint16_t codeSize = readUI16(it);
-		chunk->functions.back().code.resize(codeSize);
-		fs.read((char*) chunk->functions.back().code.data(), codeSize);
+		chunk->functions.back()->code.resize(codeSize);
+		fs.read((char*) chunk->functions.back()->code.data(), codeSize);
 	}
 	
 	return chunk;
@@ -118,14 +118,18 @@ std::string Chunk::list() {
 	for(uint32_t i = 0; i < constants->vec.size(); i++) {
 		res << i << ": " << constants->vec[i].toString() << "\n";
 	}
+	res << "\n";
 	
 	for(uint32_t i = 0; i < functions.size(); i++) {
-		res << "\nFunction prototype " + std::to_string(i) + ":\n";
-		auto it = functions[i].code.begin();
-		while(it != functions[i].code.end()) {
+		res << "Function prototype " + std::to_string(i) + ":\n";
+		auto it = functions[i]->code.begin();
+		while(it != functions[i]->code.end()) {
 			Opcode op = static_cast<Opcode>(readUI8(it));
 			res << opcodeDesc(op);
 			switch(op) {
+			case Opcode::MAKE_FUNC:
+				res << " " << (int) readUI16(it) << " " << (int) readUI16(it);
+				break;
 			case Opcode::CONSTANT:
 			case Opcode::SET:
 			case Opcode::LOCAL:

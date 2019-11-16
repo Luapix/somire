@@ -19,6 +19,7 @@ enum class ValueType : uint8_t {
 	LIST,
 	STR,
 	INTERNAL,
+	C_FUNC,
 	FUNC
 };
 
@@ -60,8 +61,6 @@ public:
 	Value minus(Value other);
 	Value divide(Value other);
 	Value multiply(Value other);
-	
-	Value call(std::vector<Value>& args);
 	
 	bool equals(Value other);
 	bool less(Value other);
@@ -128,10 +127,15 @@ public:
 
 class CFunction : public Object {
 public:
-	CFunction(std::function<Value(std::vector<Value>&)> func);
-	
-	Value call(std::vector<Value>& args);
-	
-private:
 	std::function<Value(std::vector<Value>&)> func;
+	
+	CFunction(std::function<Value(std::vector<Value>&)> func);
+};
+
+class Function : public Object {
+public:
+	uint16_t protoIdx;
+	uint16_t argCnt;
+	
+	Function(uint16_t protoIdx, uint16_t argCnt);
 };

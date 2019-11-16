@@ -18,6 +18,7 @@ std::string valueTypeDesc(ValueType type) {
 	case ValueType::LIST: return "list";
 	case ValueType::STR: return "string";
 	case ValueType::INTERNAL: return "internal";
+	case ValueType::C_FUNC: return "C function";
 	case ValueType::FUNC: return "function";
 	default:
 		throw std::runtime_error("Unknown type");
@@ -111,14 +112,6 @@ Value Value::multiply(Value other) {
 	}
 }
 
-Value Value::call(std::vector<Value>& args) {
-	if(type() == ValueType::FUNC) {
-		return static_cast<CFunction*>(getPointer())->call(args);
-	} else {
-		throw ExecutionError("Cannot call " + valueTypeDesc(type()));
-	}
-}
-
 bool Value::equals(Value other) {
 	if(isInt() && other.isInt()) return getInt() == other.getInt();
 	else if(isNumeric() && other.isNumeric()) return convertToDouble() == other.convertToDouble();
@@ -209,8 +202,6 @@ std::string String::toString() {
 }
 
 
-CFunction::CFunction(std::function<Value(std::vector<Value>&)> func) : Object(ValueType::FUNC), func(func) {}
+CFunction::CFunction(std::function<Value(std::vector<Value>&)> func) : Object(ValueType::C_FUNC), func(func) {}
 
-Value CFunction::call(std::vector<Value>& args) {
-	return func(args);
-}
+Function::Function(uint16_t protoIdx, uint16_t argCnt) : Object(ValueType::FUNC), protoIdx(protoIdx), argCnt(argCnt) {}
