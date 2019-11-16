@@ -29,7 +29,8 @@ std::unordered_map<Opcode, std::string> opcodeDescTable = {
 	{Opcode::LESS_OR_EQ, "LESS_OR_EQ"},
 	{Opcode::JUMP_IF_NOT, "JUMP_IF_NOT"},
 	{Opcode::JUMP, "JUMP"},
-	{Opcode::CALL, "CALL"}
+	{Opcode::CALL, "CALL"},
+	{Opcode::MAKE_FUNC, "MAKE_FUNC"}
 };
 
 std::string opcodeDesc(Opcode opcode) {
