@@ -10,6 +10,9 @@ struct ExecutionRecord {
 	uint32_t localBase;
 	uint32_t localCnt;
 	
+	uint32_t funcIdx;
+	uint32_t codeOffset;
+	
 	ExecutionRecord(uint32_t localBase, uint32_t localCnt);
 };
 
@@ -25,5 +28,4 @@ private:
 	std::vector<ExecutionRecord> calls;
 	
 	Value pop();
-	void runFunction(Chunk& chunk, uint16_t funcIdx);
 };

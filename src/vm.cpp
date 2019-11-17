@@ -4,7 +4,8 @@
 #include <string>
 #include <algorithm>
 
-ExecutionRecord::ExecutionRecord(uint32_t localBase, uint32_t localCnt) : localBase(localBase), localCnt(localCnt) {}
+ExecutionRecord::ExecutionRecord(uint32_t localBase, uint32_t localCnt)
+	: localBase(localBase), localCnt(localCnt), funcIdx(0), codeOffset(0) {}
 
 VM::VM() : globals(new Namespace()), stack(new List()) {
 	loadStd(*globals);
@@ -12,13 +13,11 @@ VM::VM() : globals(new Namespace()), stack(new List()) {
 
 void VM::run(Chunk& chunk) {
 	calls.emplace_back(0, 0);
-	runFunction(chunk, 0);
-	calls.pop_back();
-}
-
-void VM::runFunction(Chunk& chunk, uint16_t funcIdx) {
-	auto it = chunk.functions[funcIdx]->code.begin();
-	while(it != chunk.functions[funcIdx]->code.end()) {
+	
+	uint32_t funcIdx = 0;
+	auto it = chunk.functions[0]->code.begin();
+	bool returnNow = false;
+	while(calls.size() > 0) {
 		Opcode op = (Opcode) readUI8(it);
 		switch(op) {
 		case Opcode::IGNORE:
@@ -144,13 +143,13 @@ void VM::runFunction(Chunk& chunk, uint16_t funcIdx) {
 				Function* func2 = static_cast<Function*>(func.getPointer());
 				if(argCnt != func2->argCnt)
 					throw ExecutionError("Expected " + std::to_string(func2->argCnt) + " arguments, got " + std::to_string(argCnt));
+				
+				calls.back().funcIdx = funcIdx;
+				calls.back().codeOffset = it - chunk.functions[funcIdx]->code.begin();
+				
+				funcIdx = func2->protoIdx;
 				calls.emplace_back(stack->vec.size() - argCnt, argCnt);
-				runFunction(chunk, func2->protoIdx);
-				if(stack->vec.size() == calls.back().localBase > 1)
-					throw ExecutionError("Too many values on stack at the end of function");
-				if(stack->vec.size() == calls.back().localBase)
-					stack->vec.emplace_back(); // return nil
-				calls.pop_back();
+				it = chunk.functions[funcIdx]->code.begin();
 			} else {
 				throw ExecutionError("Cannot call " + valueTypeDesc(type));
 			}
@@ -159,15 +158,40 @@ void VM::runFunction(Chunk& chunk, uint16_t funcIdx) {
 			Value val = pop();
 			stack->vec.resize(calls.back().localBase); // Pop all locals
 			stack->vec.push_back(val); // Push return value
-			return;
+			returnNow = true;
+			break;
 		} case Opcode::MAKE_FUNC:
 			stack->vec.emplace_back(new Function(readUI16(it), readUI16(it)));
 			break;
 		default:
 			throw ExecutionError("Opcode " + opcodeDesc(op) + " not yet implemented");
 		}
+		
+		if(!returnNow && it == chunk.functions[funcIdx]->code.end()) { // implicit "return nil"
+			stack->vec.resize(calls.back().localBase);
+			stack->vec.emplace_back();
+			returnNow = true;
+		}
+		
+		if(returnNow) {
+			returnNow = false;
+			uint32_t leftOnStack = stack->vec.size() - calls.back().localBase;
+			if(leftOnStack != 1)
+				throw ExecutionError("Unexpected number of values on stack at the end of function: " + std::to_string(leftOnStack));
+			calls.pop_back();
+			
+			if(calls.size() == 0) { // we just exited the main function
+				break;
+			} else {
+				funcIdx = calls.back().funcIdx;
+				it = chunk.functions[funcIdx]->code.begin() + calls.back().codeOffset;
+			}
+		}
+		
 		GC::step();
 	}
+	
+	GC::collect();
 }
 
 inline Value VM::pop() {
