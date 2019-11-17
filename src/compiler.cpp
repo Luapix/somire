@@ -126,7 +126,11 @@ void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx
 		writeI16(curFunc.codeOut, computeJump(curFunc.code.size() + 2, before));
 		curFunc.fillInJump(addPos);
 		break;
-	} default:
+	} case NodeType::RETURN:
+		compileExpression(curFunc, *static_cast<NodeReturn&>(stat).expr, ctx);
+		writeUI8(curFunc.codeOut, (uint8_t) Opcode::RETURN);
+		break;
+	default:
 		throw CompileError("Statement type not implemented: " + nodeTypeDesc(stat.type));
 	}
 }

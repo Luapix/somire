@@ -28,7 +28,7 @@ enum class Opcode : uint8_t {
 	LESS, LESS_OR_EQ,
 	JUMP_IF_NOT,
 	JUMP,
-	CALL,
+	CALL, RETURN,
 	MAKE_FUNC
 };
 

@@ -146,12 +146,20 @@ void VM::runFunction(Chunk& chunk, uint16_t funcIdx) {
 					throw ExecutionError("Expected " + std::to_string(func2->argCnt) + " arguments, got " + std::to_string(argCnt));
 				calls.emplace_back(stack->vec.size() - argCnt, argCnt);
 				runFunction(chunk, func2->protoIdx);
+				if(stack->vec.size() == calls.back().localBase > 1)
+					throw ExecutionError("Too many values on stack at the end of function");
+				if(stack->vec.size() == calls.back().localBase)
+					stack->vec.emplace_back(); // return nil
 				calls.pop_back();
-				stack->vec.emplace_back(); // For now, Somiré functions have no way of returning a value
 			} else {
 				throw ExecutionError("Cannot call " + valueTypeDesc(type));
 			}
 			break;
+		} case Opcode::RETURN: {
+			Value val = pop();
+			stack->vec.resize(calls.back().localBase); // Pop all locals
+			stack->vec.push_back(val); // Push return value
+			return;
 		} case Opcode::MAKE_FUNC:
 			stack->vec.emplace_back(new Function(readUI16(it), readUI16(it)));
 			break;

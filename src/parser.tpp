@@ -193,6 +193,11 @@ std::unique_ptr<Node> Parser<C>::parseStatement() {
 		nextToken();
 		std::unique_ptr<Node> block = parseIndentedBlock();
 		return std::unique_ptr<Node>(new NodeWhile(std::move(cond), std::move(block)));
+	} else if(isCurSymbol("return")) {
+		nextToken();
+		std::unique_ptr<Node> expr = parseExpr();
+		finishStatement();
+		return std::unique_ptr<Node>(new NodeReturn(std::move(expr)));
 	} else {
 		std::unique_ptr<Node> expr = parseExpr();
 		finishStatement();

@@ -30,6 +30,7 @@ std::unordered_map<Opcode, std::string> opcodeDescTable = {
 	{Opcode::JUMP_IF_NOT, "JUMP_IF_NOT"},
 	{Opcode::JUMP, "JUMP"},
 	{Opcode::CALL, "CALL"},
+	{Opcode::RETURN, "RETURN"},
 	{Opcode::MAKE_FUNC, "MAKE_FUNC"}
 };
 

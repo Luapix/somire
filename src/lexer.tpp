@@ -75,7 +75,8 @@ std::unique_ptr<Node> Lexer<C>::lexNewline() {
 std::unordered_set<std::string> keywords = {
 	"let", "if", "else", "while",
 	"not", "and", "or",
-	"nil", "true", "false"
+	"nil", "true", "false",
+	"return"
 };
 
 template<typename C>

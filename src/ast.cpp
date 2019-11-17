@@ -24,6 +24,7 @@ std::string nodeTypeDesc(NodeType type) {
 	case NodeType::EXPR_STAT: return "expression statement";
 	case NodeType::IF: return "if";
 	case NodeType::WHILE: return "while";
+	case NodeType::RETURN: return "return";
 	case NodeType::FUNC: return "function";
 	case NodeType::BLOCK: return "block";
 	default:
@@ -137,6 +138,10 @@ NodeWhile::NodeWhile(std::unique_ptr<Node> cond, std::unique_ptr<Node> block) : 
 	cond(std::move(cond)), block(std::move(block)) {}
 
 std::string NodeWhile::getDataDesc(std::string prefix) { return " " + cond->toString(prefix) + ": " + block->toString(prefix); }
+
+NodeReturn::NodeReturn(std::unique_ptr<Node> expr) : Node(NodeType::RETURN), expr(std::move(expr)) {}
+
+std::string NodeReturn::getDataDesc(std::string prefix) { return " " + expr->toString(prefix); }
 
 NodeFunction::NodeFunction(std::vector<std::string> argNames, std::unique_ptr<Node> block)
 	: Node(NodeType::FUNC), argNames(argNames), block(std::move(block)) {}
