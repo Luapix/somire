@@ -91,15 +91,17 @@ void VM::run(Chunk& chunk) {
 			calls.back().localCnt -= amount;
 			stack->vec.resize(calls.back().localBase + calls.back().localCnt);
 			break;
-		} case Opcode::SET: {
-			uint16_t localIdx = readUI16(it);
+		} case Opcode::SET_LOCAL: {
+			int16_t localIdx = readI16(it);
+			if(localIdx < 0) throw ExecutionError("Upvalues not yet implemented");
 			if(localIdx >= calls.back().localCnt)
 				throw ExecutionError("Trying to assign to undefined local");
 			Value val = pop();
 			stack->vec[calls.back().localBase + localIdx] = val;
 			break;
 		} case Opcode::LOCAL: {
-			uint16_t localIdx = readUI16(it);
+			int16_t localIdx = readI16(it);
+			if(localIdx < 0) throw ExecutionError("Upvalues not yet implemented");
 			if(localIdx >= calls.back().localCnt)
 				throw ExecutionError("Trying to access undefined local");
 			stack->vec.push_back(stack->vec[calls.back().localBase + localIdx]);
@@ -160,10 +162,18 @@ void VM::run(Chunk& chunk) {
 			stack->vec.push_back(val); // Push return value
 			returnNow = true;
 			break;
-		} case Opcode::MAKE_FUNC:
-			stack->vec.emplace_back(new Function(readUI16(it), readUI16(it)));
+		} case Opcode::MAKE_FUNC: {
+			uint16_t protoIdx = readUI16(it);
+			uint16_t argCnt = readUI16(it);
+			uint16_t upvalueCnt = readUI16(it);
+			std::vector<int16_t> upvalues;
+			upvalues.resize(upvalueCnt);
+			for(uint16_t i = 0; i < upvalueCnt; i++) {
+				upvalues[i] = readI16(it);
+			}
+			stack->vec.emplace_back(new Function(protoIdx, argCnt));
 			break;
-		default:
+		} default:
 			throw ExecutionError("Opcode " + opcodeDesc(op) + " not yet implemented");
 		}
 		

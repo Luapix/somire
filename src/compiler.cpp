@@ -1,49 +1,55 @@
 #include "compiler.hpp"
 
-Context::Context(Context* parent) : parent(parent) {}
-
-bool Context::isInner(std::string var) { return innerLocals.find(var) != innerLocals.end(); }
-
-uint16_t Context::innerCount() { return (uint16_t) innerLocals.size(); }
-
-void Context::define(std::string var) {
-	if(isInner(var))
-		throw CompileError("Trying to define " + var + " twice");
-	uint16_t next = nextIndex();
-	innerLocals[var] = next;
+Context::Context(bool isFuncTop, Context* parent)
+	: isFuncTop(isFuncTop), parent(parent), nextLocal(0), nextUpvalue(-1), innerLocalCount(0) {
+	if(!isFuncTop) {
+		nextLocal = parent->nextLocal;
+	}
 }
 
-bool Context::isDefined(std::string var) {
-	if(isInner(var)) {
+bool Context::getVariable(std::string var, int16_t& idx) {
+	auto it = variables.find(var);
+	if(it != variables.end()) { // if local or known upvalue
+		idx = it->second;
 		return true;
-	} else if(parent) {
-		return parent->isDefined(var);
+	} else if(isFuncTop) { // look in surrounding function
+		if(parent) {
+			int16_t idx2;
+			if(parent->getVariable(var, idx2)) { // add new upvalue
+				idx = nextUpvalue--;
+				variables[var] = idx;
+				upvalues.push_back(idx2); // save what the upvalue points to
+				return true;
+			} else { // global or undefined
+				return false;
+			}
+		} else { // global or undefined
+			return false;
+		}
 	} else {
-		return false;
+		return parent->getVariable(var, idx);
 	}
 }
 
-uint16_t Context::getIndex(std::string var) {
-	if(isInner(var)) {
-		return innerLocals[var];
-	} else if(parent) {
-		return parent->getIndex(var);
+void Context::defineLocal(std::string var) {
+	if(variables.find(var) != variables.end())
+		throw CompileError("Trying to define another " + var + " in block");
+	variables[var] = nextLocal++;
+	innerLocalCount++;
+}
+
+uint16_t Context::getLocalCount() {
+	return innerLocalCount;
+}
+
+std::vector<int16_t>& Context::getFunctionUpvalues() {
+	if(isFuncTop) {
+		return upvalues;
 	} else {
-		throw CompileError("Trying to access undefined variable " + var);
+		return parent->getFunctionUpvalues();
 	}
 }
 
-uint16_t Context::nextIndex() {
-	uint32_t next;
-	if(parent) {
-		next = (uint32_t) parent->nextIndex() + innerLocals.size();
-	} else {
-		next = innerLocals.size();
-	}
-	if(next >= 0xffff)
-		throw CompileError("Too many locals in function");
-	return (uint16_t) next;
-}
 
 Compiler::Compiler() {}
 
@@ -55,22 +61,23 @@ std::unique_ptr<Chunk> Compiler::compileProgram(std::unique_ptr<Node> ast) {
 	return std::move(curChunk);
 }
 
-void Compiler::compileFunction(NodeBlock& block, std::vector<std::string> argNames) {
+std::vector<int16_t> Compiler::compileFunction(NodeBlock& block, std::vector<std::string> argNames, Context* parent) {
 	curChunk->functions.emplace_back(new FunctionChunk());
-	Context ctx;
+	Context ctx(true, parent);
 	for(std::string arg : argNames) {
-		ctx.define(arg);
+		ctx.defineLocal(arg);
 	}
 	compileBlock(*curChunk->functions.back(), block, ctx);
+	return ctx.getFunctionUpvalues();
 }
 
 void Compiler::compileBlock(FunctionChunk& curFunc, NodeBlock& block, Context& ctx) {
 	for(const std::unique_ptr<Node>& stat : block.statements) {
 		compileStatement(curFunc, *stat, ctx);
 	}
-	if(ctx.innerCount() > 0) { // pop locals
+	if(ctx.getLocalCount() > 0) { // pop locals
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::POP);
-		writeUI16(curFunc.codeOut, ctx.innerCount());
+		writeUI16(curFunc.codeOut, ctx.getLocalCount());
 	}
 }
 
@@ -78,15 +85,18 @@ void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx
 	switch(stat.type) {
 	case NodeType::LET: {
 		NodeLet& stat2 = static_cast<NodeLet&>(stat);
-		ctx.define(stat2.id);
+		ctx.defineLocal(stat2.id);
 		compileExpression(curFunc, *stat2.exp, ctx);
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::LET);
 		break;
 	} case NodeType::SET: {
 		NodeSet& stat2 = static_cast<NodeSet&>(stat);
+		int16_t idx;
+		if(!ctx.getVariable(stat2.id, idx))
+			throw CompileError("Trying to set global or undefined variable " + stat2.id); // for now, no modifying globals
 		compileExpression(curFunc, *stat2.exp, ctx);
-		writeUI8(curFunc.codeOut, (uint8_t) Opcode::SET);
-		writeUI16(curFunc.codeOut, ctx.getIndex(stat2.id));
+		writeUI8(curFunc.codeOut, (uint8_t) Opcode::SET_LOCAL);
+		writeI16(curFunc.codeOut, idx);
 		break;
 	} case NodeType::EXPR_STAT:
 		compileExpression(curFunc, *static_cast<NodeExprStat&>(stat).exp, ctx);
@@ -98,7 +108,7 @@ void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::JUMP_IF_NOT);
 		uint32_t addPos = curFunc.code.size();
 		writeI16(curFunc.codeOut, 0);
-		Context thenCtx(&ctx);
+		Context thenCtx(false, &ctx);
 		compileBlock(curFunc, static_cast<NodeBlock&>(*stat2.thenBlock), thenCtx);
 		uint32_t addPos2;
 		if(stat2.elseBlock) {
@@ -108,7 +118,7 @@ void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx
 		}
 		curFunc.fillInJump(addPos);
 		if(stat2.elseBlock) {
-			Context elseCtx(&ctx);
+			Context elseCtx(false, &ctx);
 			compileBlock(curFunc, static_cast<NodeBlock&>(*stat2.elseBlock), elseCtx);
 			curFunc.fillInJump(addPos2);
 		}
@@ -120,7 +130,7 @@ void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::JUMP_IF_NOT);
 		uint32_t addPos = curFunc.code.size();
 		writeI16(curFunc.codeOut, 0);
-		Context innerCtx(&ctx);
+		Context innerCtx(false, &ctx);
 		compileBlock(curFunc, static_cast<NodeBlock&>(*stat2.block), innerCtx);
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::JUMP);
 		writeI16(curFunc.codeOut, computeJump(curFunc.code.size() + 2, before));
@@ -166,9 +176,10 @@ void Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& ct
 		break;
 	} case NodeType::ID: {
 		NodeId& expr2 = static_cast<NodeId&>(expr);
-		if(ctx.isDefined(expr2.val)) {
+		int16_t idx;
+		if(ctx.getVariable(expr2.val, idx)) {
 			writeUI8(curFunc.codeOut, (uint8_t) Opcode::LOCAL);
-			writeUI16(curFunc.codeOut, ctx.getIndex(expr2.val));
+			writeI16(curFunc.codeOut, idx);
 		} else {
 			writeUI8(curFunc.codeOut, (uint8_t) Opcode::GLOBAL);
 			writeUI16(curFunc.codeOut, curChunk->constants->vec.size());
@@ -224,7 +235,13 @@ void Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& ct
 		if(expr2.argNames.size() > 0xffff)
 			throw CompileError("Too many arguments in function definition");
 		writeUI16(curFunc.codeOut, (uint16_t) expr2.argNames.size());
-		compileFunction(static_cast<NodeBlock&>(*expr2.block), expr2.argNames);
+		std::vector<int16_t> upvalues = compileFunction(static_cast<NodeBlock&>(*expr2.block), expr2.argNames, &ctx);
+		if(upvalues.size() > 0xffff)
+			throw CompileError("Too many upvalues in function definition");
+		writeUI16(curFunc.codeOut, (uint16_t) upvalues.size());
+		for(int16_t upvalue : upvalues) {
+			writeI16(curFunc.codeOut, upvalue);
+		}
 		break;
 	} default:
 		throw CompileError("Expression type not implemented: " + nodeTypeDesc(expr.type));

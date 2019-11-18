@@ -18,7 +18,7 @@ std::unordered_map<Opcode, std::string> opcodeDescTable = {
 	{Opcode::DIVIDE, "DIVIDE"},
 	{Opcode::LET, "LET"},
 	{Opcode::POP, "POP"},
-	{Opcode::SET, "SET"},
+	{Opcode::SET_LOCAL, "SET_LOCAL"},
 	{Opcode::LOCAL, "LOCAL"},
 	{Opcode::GLOBAL, "GLOBAL"},
 	{Opcode::NOT, "NOT"},
@@ -128,12 +128,21 @@ std::string Chunk::list() {
 			Opcode op = static_cast<Opcode>(readUI8(it));
 			res << opcodeDesc(op);
 			switch(op) {
-			case Opcode::MAKE_FUNC:
-				res << " " << (int) readUI16(it) << " " << (int) readUI16(it);
+			case Opcode::MAKE_FUNC: {
+				res << " proto = " << (int) readUI16(it) << "; argCnt = " << (int) readUI16(it) << "\n  upvalues = [";
+				uint16_t upvalues = readUI16(it);
+				for(uint16_t i = 0; i < upvalues; i++) {
+					res << (int) readI16(it);
+					if(i != upvalues-1)
+						res << ",";
+				}
+				res << "]";
+				break;
+			} case Opcode::LOCAL:
+			case Opcode::SET_LOCAL:
+				res << " " << (int) readI16(it);
 				break;
 			case Opcode::CONSTANT:
-			case Opcode::SET:
-			case Opcode::LOCAL:
 			case Opcode::GLOBAL:
 			case Opcode::POP:
 			case Opcode::CALL:

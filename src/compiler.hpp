@@ -7,22 +7,26 @@
 #include "ast.hpp"
 #include "chunk.hpp"
 
+
 class Context {
 public:
-	Context(Context* parent = nullptr);
+	Context(bool isFuncTop, Context* parent);
 	
-	bool isInner(std::string var);
-	uint16_t innerCount();
+	bool getVariable(std::string var, int16_t& idx);
+	void defineLocal(std::string var);
+	uint16_t getLocalCount();
 	
-	void define(std::string var);
-	bool isDefined(std::string var);
-	uint16_t getIndex(std::string var);
+	std::vector<int16_t>& getFunctionUpvalues();
 	
 private:
+	bool isFuncTop;
 	Context* parent;
-	std::unordered_map<std::string, uint16_t> innerLocals;
 	
-	uint16_t nextIndex();
+	std::unordered_map<std::string, int16_t> variables;
+	std::vector<int16_t> upvalues;
+	int16_t nextLocal;
+	int16_t nextUpvalue;
+	uint16_t innerLocalCount;
 };
 
 class Compiler {
@@ -34,7 +38,7 @@ public:
 private:
 	std::unique_ptr<Chunk> curChunk;
 	
-	void compileFunction(NodeBlock& block, std::vector<std::string> argNames);
+	std::vector<int16_t> compileFunction(NodeBlock& block, std::vector<std::string> argNames, Context* parent = nullptr);
 	void compileBlock(FunctionChunk& curFunc, NodeBlock& block, Context& ctx);
 	void compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx);
 	void compileExpression(FunctionChunk& curFunc, Node& expr, Context& ctx);
