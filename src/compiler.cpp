@@ -85,9 +85,12 @@ void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx
 	switch(stat.type) {
 	case NodeType::LET: {
 		NodeLet& stat2 = static_cast<NodeLet&>(stat);
-		ctx.defineLocal(stat2.id);
+		if(stat2.exp->type == NodeType::FUNC)
+			ctx.defineLocal(stat2.id); // Define in advance to allow for recursion
 		compileExpression(curFunc, *stat2.exp, ctx);
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::LET);
+		if(stat2.exp->type != NodeType::FUNC)
+			ctx.defineLocal(stat2.id);
 		break;
 	} case NodeType::SET: {
 		NodeSet& stat2 = static_cast<NodeSet&>(stat);

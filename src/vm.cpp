@@ -192,7 +192,13 @@ void VM::run(Chunk& chunk) {
 					if(it != record.upvalueBackPointers.end()) {
 						func->upvalues[i] = it->second;
 					} else {
-						Upvalue* upvalue = new Upvalue(&getLocal(idx), &record, idx);
+						Value* value;
+						if(idx == record.localCnt) { // recursive call (hopefully)
+							value = &stack->array[record.localBase + idx];
+						} else {
+							value = &getLocal(idx);
+						}
+						Upvalue* upvalue = new Upvalue(value, &record, idx);
 						record.upvalueBackPointers[idx] = upvalue;
 						func->upvalues[i] = upvalue;
 					}
