@@ -65,15 +65,15 @@ std::vector<int16_t> Compiler::compileFunction(NodeBlock& block, std::vector<std
 	for(std::string arg : argNames) {
 		ctx.defineLocal(arg);
 	}
-	compileBlock(*curChunk->functions.back(), block, ctx);
+	compileBlock(*curChunk->functions.back(), block, ctx, false); // no need to pop locals at the end of a function
 	return ctx.getFunctionUpvalues();
 }
 
-void Compiler::compileBlock(FunctionChunk& curFunc, NodeBlock& block, Context& ctx) {
+void Compiler::compileBlock(FunctionChunk& curFunc, NodeBlock& block, Context& ctx, bool popLocals) {
 	for(const std::unique_ptr<Node>& stat : block.statements) {
 		compileStatement(curFunc, *stat, ctx);
 	}
-	if(ctx.getLocalCount() > 0) { // pop locals
+	if(popLocals && ctx.getLocalCount() > 0) { // pop locals
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::POP);
 		writeUI16(curFunc.codeOut, ctx.getLocalCount());
 	}

@@ -39,7 +39,7 @@ private:
 	std::unique_ptr<Chunk> curChunk;
 	
 	std::vector<int16_t> compileFunction(NodeBlock& block, std::vector<std::string> argNames, Context* parent = nullptr);
-	void compileBlock(FunctionChunk& curFunc, NodeBlock& block, Context& ctx);
+	void compileBlock(FunctionChunk& curFunc, NodeBlock& block, Context& ctx, bool popLocals = true);
 	void compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx);
 	void compileExpression(FunctionChunk& curFunc, Node& expr, Context& ctx);
 	void compileConstant(FunctionChunk& curFunc, Value val);
