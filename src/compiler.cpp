@@ -32,8 +32,6 @@ bool Context::getVariable(std::string var, int16_t& idx) {
 }
 
 void Context::defineLocal(std::string var) {
-	if(variables.find(var) != variables.end())
-		throw CompileError("Trying to define another " + var + " in block");
 	variables[var] = nextLocal++;
 	innerLocalCount++;
 }
