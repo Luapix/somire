@@ -33,6 +33,7 @@ private:
 	std::unique_ptr<Node> parseExpr(int prec = 0);
 	std::unique_ptr<Node> parseMultilineExpr();
 	void finishStatement();
+	std::unique_ptr<Node> parseIfStatement();
 	std::unique_ptr<Node> parseStatement();
 	std::unique_ptr<Node> parseBlock();
 	std::unique_ptr<Node> parseIndentedBlock();

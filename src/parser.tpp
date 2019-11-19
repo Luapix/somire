@@ -164,6 +164,26 @@ void Parser<C>::finishStatement() {
 }
 
 template<typename C>
+std::unique_ptr<Node> Parser<C>::parseIfStatement() {
+	nextToken();
+	std::unique_ptr<Node> cond = parseExpr();
+	discardSymbol(":");
+	std::unique_ptr<NodeIf> node(new NodeIf(std::move(cond), parseIndentedBlock()));
+	if(isCurSymbol("else")) {
+		nextToken();
+		if(isCurSymbol("if")) {
+			std::vector<std::unique_ptr<Node>> statements;
+			statements.push_back(parseIfStatement());
+			node->elseBlock = std::unique_ptr<Node>(new NodeBlock(std::move(statements)));
+		} else {
+			discardSymbol(":");
+			node->elseBlock = parseIndentedBlock();
+		}
+	}
+	return node;
+}
+
+template<typename C>
 std::unique_ptr<Node> Parser<C>::parseStatement() {
 	if(isCurSymbol("let")) {
 		nextToken();
@@ -202,16 +222,7 @@ std::unique_ptr<Node> Parser<C>::parseStatement() {
 		std::unique_ptr<Node> expr = parseMultilineExpr();
 		return std::unique_ptr<Node>(new NodeSet(id, std::move(expr)));
 	} else if(isCurSymbol("if")) {
-		nextToken();
-		std::unique_ptr<Node> cond = parseExpr();
-		discardSymbol(":");
-		std::unique_ptr<NodeIf> node(new NodeIf(std::move(cond), parseIndentedBlock()));
-		if(isCurSymbol("else")) {
-			nextToken();
-			discardSymbol(":");
-			node->elseBlock = parseIndentedBlock();
-		}
-		return node;
+		return parseIfStatement();
 	} else if(isCurSymbol("while")) {
 		nextToken();
 		std::unique_ptr<Node> cond = parseExpr();
