@@ -33,7 +33,7 @@ VM::VM() : globals(new Namespace()), stack(new Stack()) {
 }
 
 void VM::run(Chunk& chunk) {
-	calls.emplace_back(0, 0);
+	calls.emplace_back(new ExecutionRecord(0, 0));
 	
 	uint32_t funcIdx = 0;
 	auto it = chunk.functions[0]->code.begin();
@@ -105,7 +105,7 @@ void VM::run(Chunk& chunk) {
 			stack->push(Value(left.less_or_eq(right)));
 			break;
 		} case Opcode::LET: {
-			calls.back().localCnt++;
+			calls.back()->localCnt++;
 			break;
 		} case Opcode::POP: {
 			uint16_t amount = readUI16(it);
@@ -163,11 +163,11 @@ void VM::run(Chunk& chunk) {
 				if(argCnt != func2->argCnt)
 					throw ExecutionError("Expected " + std::to_string(func2->argCnt) + " arguments, got " + std::to_string(argCnt));
 				
-				calls.back().funcIdx = funcIdx;
-				calls.back().codeOffset = it - chunk.functions[funcIdx]->code.begin();
+				calls.back()->funcIdx = funcIdx;
+				calls.back()->codeOffset = it - chunk.functions[funcIdx]->code.begin();
 				
 				funcIdx = func2->protoIdx;
-				calls.emplace_back(stack->size() - argCnt, argCnt, func2);
+				calls.emplace_back(new ExecutionRecord(stack->size() - argCnt, argCnt, func2));
 				it = chunk.functions[funcIdx]->code.begin();
 			} else {
 				throw ExecutionError("Cannot call " + valueTypeDesc(type));
@@ -175,7 +175,7 @@ void VM::run(Chunk& chunk) {
 			break;
 		} case Opcode::RETURN: {
 			Value val = stack->pop();
-			popLocals(calls.back().localCnt);
+			popLocals(calls.back()->localCnt);
 			stack->push(val); // Push return value
 			returnNow = true;
 			break;
@@ -186,7 +186,7 @@ void VM::run(Chunk& chunk) {
 			Function* func = new Function(protoIdx, argCnt, upvalueCnt);
 			for(uint16_t i = 0; i < upvalueCnt; i++) {
 				int16_t idx = readI16(it);
-				ExecutionRecord& record = calls.back();
+				ExecutionRecord& record = *calls.back();
 				if(idx >= 0) {
 					auto it = record.upvalueBackPointers.find(idx);
 					if(it != record.upvalueBackPointers.end()) {
@@ -213,14 +213,14 @@ void VM::run(Chunk& chunk) {
 		}
 		
 		if(!returnNow && it == chunk.functions[funcIdx]->code.end()) { // implicit "return nil"
-			popLocals(calls.back().localCnt);
+			popLocals(calls.back()->localCnt);
 			stack->push(Value());
 			returnNow = true;
 		}
 		
 		if(returnNow) {
 			returnNow = false;
-			uint32_t leftOnStack = stack->size() - calls.back().localBase;
+			uint32_t leftOnStack = stack->size() - calls.back()->localBase;
 			if(leftOnStack != 1)
 				throw ExecutionError("Unexpected number of values on stack at the end of function: " + std::to_string(leftOnStack));
 			calls.pop_back();
@@ -228,8 +228,8 @@ void VM::run(Chunk& chunk) {
 			if(calls.size() == 0) { // we just exited the main function
 				break;
 			} else {
-				funcIdx = calls.back().funcIdx;
-				it = chunk.functions[funcIdx]->code.begin() + calls.back().codeOffset;
+				funcIdx = calls.back()->funcIdx;
+				it = chunk.functions[funcIdx]->code.begin() + calls.back()->codeOffset;
 			}
 		}
 		
@@ -240,26 +240,26 @@ void VM::run(Chunk& chunk) {
 }
 
 inline Value& VM::getLocal(uint16_t idx) {
-	if(idx >= calls.back().localCnt)
+	if(idx >= calls.back()->localCnt)
 		throw ExecutionError("Trying to access undefined local");
-	return stack->array[calls.back().localBase + idx];
+	return stack->array[calls.back()->localBase + idx];
 }
 
 inline Upvalue& VM::getUpvalue(int16_t idx) {
 	if(idx >= 0) throw ExecutionError("Trying to access invalid upvalue");
-	Function* func = calls.back().func;
+	Function* func = calls.back()->func;
 	if(!func) throw ExecutionError("Cannot access upvalues in main chunk");
 	return *func->upvalues[-idx-1];
 }
 
 void VM::popLocals(uint16_t amount) {
-	ExecutionRecord& record = calls.back();
+	ExecutionRecord& record = *calls.back();
 	for(uint16_t i = record.localCnt - amount; i < record.localCnt; i++) {
 		auto it = record.upvalueBackPointers.find(i);
 		if(it != record.upvalueBackPointers.end()) {
 			it->second->close();
 		}
 	}
-	calls.back().localCnt -= amount;
+	calls.back()->localCnt -= amount;
 	stack->removeN(amount);
 }

@@ -45,7 +45,7 @@ public:
 private:
 	GC::Root<Namespace> globals;
 	GC::Root<Stack> stack;
-	std::vector<ExecutionRecord> calls;
+	std::vector<std::unique_ptr<ExecutionRecord>> calls;
 	
 	Value pop();
 	
