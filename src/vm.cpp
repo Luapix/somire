@@ -4,10 +4,31 @@
 #include <string>
 #include <algorithm>
 
-ExecutionRecord::ExecutionRecord(uint32_t localBase, uint32_t localCnt)
-	: localBase(localBase), localCnt(localCnt), funcIdx(0), codeOffset(0) {}
 
-VM::VM() : globals(new Namespace()), stack(new List()) {
+Stack::Stack() : Object(ValueType::INTERNAL), base(&array[0]), top((Value*) base) {}
+
+std::vector<Value> Stack::popN(uint32_t n) {
+	if(size() < n) throw ExecutionError("Stack is too small to pop " + std::to_string(n) + " values");
+	std::vector<Value> res;
+	res.resize(n);
+	std::copy(top - n, top, res.begin());
+	top -= n;
+	return res;
+}
+
+void Stack::removeN(uint32_t n) {
+	if(size() < n) throw ExecutionError("Stack is too small to remove " + std::to_string(n) + " values");
+	top -= n;
+}
+
+void Stack::markChildren() {
+	for(auto it = &array[0]; it != top; it++) {
+		it->mark();
+	}
+}
+
+
+VM::VM() : globals(new Namespace()), stack(new Stack()) {
 	loadStd(*globals);
 }
 
@@ -21,90 +42,90 @@ void VM::run(Chunk& chunk) {
 		Opcode op = (Opcode) readUI8(it);
 		switch(op) {
 		case Opcode::IGNORE:
-			stack->vec.resize(calls.back().localBase + calls.back().localCnt);
+			stack->pop();
 			break;
 		case Opcode::CONSTANT: {
 			uint16_t constantIdx = readUI16(it);
-			stack->vec.push_back(chunk.constants->vec.at(constantIdx));
+			stack->push(chunk.constants->vec.at(constantIdx));
 			break;
 		} case Opcode::UNI_MINUS: {
-			Value val = pop();
-			stack->vec.push_back(val.negate());
+			Value val = stack->pop();
+			stack->push(val.negate());
 			break;
 		} case Opcode::BIN_PLUS: {
-			Value right = pop();
-			Value left = pop();
-			stack->vec.push_back(left.plus(right));
+			Value right = stack->pop();
+			Value left = stack->pop();
+			stack->push(left.plus(right));
 			break;
 		} case Opcode::BIN_MINUS: {
-			Value right = pop();
-			Value left = pop();
-			stack->vec.push_back(left.minus(right));
+			Value right = stack->pop();
+			Value left = stack->pop();
+			stack->push(left.minus(right));
 			break;
 		} case Opcode::MULTIPLY: {
-			Value right = pop();
-			Value left = pop();
-			stack->vec.push_back(left.multiply(right));
+			Value right = stack->pop();
+			Value left = stack->pop();
+			stack->push(left.multiply(right));
 			break;
 		} case Opcode::DIVIDE: {
-			Value right = pop();
-			Value left = pop();
-			stack->vec.push_back(left.divide(right));
+			Value right = stack->pop();
+			Value left = stack->pop();
+			stack->push(left.divide(right));
 			break;
 		} case Opcode::NOT: {
-			Value val = pop();
+			Value val = stack->pop();
 			if(!val.isBool()) throw ExecutionError("Cannot 'not' non-boolean value " + val.toString());
-			stack->vec.emplace_back(!val.getBool());
+			stack->push(Value(!val.getBool()));
 			break;
 		} case Opcode::AND: {
-			Value right = pop();
-			Value left = pop();
+			Value right = stack->pop();
+			Value left = stack->pop();
 			if(!left.isBool() || !right.isBool()) throw ExecutionError("Cannot 'and' " + left.toString() + " and " + right.toString());
-			stack->vec.emplace_back(left.getBool() && right.getBool());
+			stack->push(Value(left.getBool() && right.getBool()));
 			break;
 		} case Opcode::OR: {
-			Value right = pop();
-			Value left = pop();
+			Value right = stack->pop();
+			Value left = stack->pop();
 			if(!left.isBool() || !right.isBool()) throw ExecutionError("Cannot 'or' " + left.toString() + " and " + right.toString());
-			stack->vec.emplace_back(left.getBool() || right.getBool());
+			stack->push(Value(left.getBool() || right.getBool()));
 			break;
 		} case Opcode::EQUALS: {
-			Value right = pop();
-			Value left = pop();
-			stack->vec.emplace_back(left.equals(right));
+			Value right = stack->pop();
+			Value left = stack->pop();
+			stack->push(Value(left.equals(right)));
 			break;
 		} case Opcode::LESS: {
-			Value right = pop();
-			Value left = pop();
-			stack->vec.emplace_back(left.less(right));
+			Value right = stack->pop();
+			Value left = stack->pop();
+			stack->push(Value(left.less(right)));
 			break;
 		} case Opcode::LESS_OR_EQ: {
-			Value right = pop();
-			Value left = pop();
-			stack->vec.emplace_back(left.less_or_eq(right));
+			Value right = stack->pop();
+			Value left = stack->pop();
+			stack->push(Value(left.less_or_eq(right)));
 			break;
 		} case Opcode::LET: {
 			calls.back().localCnt++;
 			break;
 		} case Opcode::POP: {
 			uint16_t amount = readUI16(it);
-			calls.back().localCnt -= amount;
-			stack->vec.resize(calls.back().localBase + calls.back().localCnt);
+			popLocals(amount);
 			break;
 		} case Opcode::SET_LOCAL: {
 			int16_t localIdx = readI16(it);
-			if(localIdx < 0) throw ExecutionError("Upvalues not yet implemented");
-			if(localIdx >= calls.back().localCnt)
-				throw ExecutionError("Trying to assign to undefined local");
-			Value val = pop();
-			stack->vec[calls.back().localBase + localIdx] = val;
+			if(localIdx >= 0) {
+				getLocal(localIdx) = stack->pop();
+			} else {
+				getUpvalue(localIdx).resolve() = stack->pop();
+			}
 			break;
 		} case Opcode::LOCAL: {
 			int16_t localIdx = readI16(it);
-			if(localIdx < 0) throw ExecutionError("Upvalues not yet implemented");
-			if(localIdx >= calls.back().localCnt)
-				throw ExecutionError("Trying to access undefined local");
-			stack->vec.push_back(stack->vec[calls.back().localBase + localIdx]);
+			if(localIdx >= 0) {
+				stack->push(getLocal(localIdx));
+			} else {
+				stack->push(getUpvalue(localIdx).resolve());
+			}
 			break;
 		} case Opcode::GLOBAL: {
 			uint16_t constantIdx = readUI16(it);
@@ -113,10 +134,10 @@ void VM::run(Chunk& chunk) {
 			std::string name = static_cast<String*>(nameValue.getPointer())->str;
 			auto it = globals->map.find(name);
 			if(it == globals->map.end()) throw ExecutionError("Tring to access undefined global " + name);
-			stack->vec.push_back(it->second);
+			stack->push(it->second);
 			break;
 		} case Opcode::JUMP_IF_NOT: {
-			Value cond = pop();
+			Value cond = stack->pop();
 			int16_t relJump = readI16(it);
 			if(!cond.isBool()) throw ExecutionError("Expected boolean in 'if' condition, got " + cond.toString());
 			if(!cond.getBool())
@@ -128,18 +149,14 @@ void VM::run(Chunk& chunk) {
 		case Opcode::CALL: {
 			uint16_t argCnt = readUI16(it);
 			
-			Value func = pop();
+			Value func = stack->pop();
 			ValueType type = func.type();
 			
 			if(type == ValueType::C_FUNC) {
 				// Pop the arguments off the stack
-				std::vector<Value> args;
-				args.resize(argCnt);
-				std::copy_n(stack->vec.rbegin(), argCnt, args.rbegin());
-				stack->vec.resize(stack->vec.size() - argCnt);
-				
+				std::vector<Value> args = stack->popN(argCnt);
 				Value res = static_cast<CFunction*>(func.getPointer())->func(args);
-				stack->vec.push_back(res);
+				stack->push(res);
 			} else if(type == ValueType::FUNC) {
 				// We leave the arguments on the stack, they will become locals
 				Function* func2 = static_cast<Function*>(func.getPointer());
@@ -150,42 +167,54 @@ void VM::run(Chunk& chunk) {
 				calls.back().codeOffset = it - chunk.functions[funcIdx]->code.begin();
 				
 				funcIdx = func2->protoIdx;
-				calls.emplace_back(stack->vec.size() - argCnt, argCnt);
+				calls.emplace_back(stack->size() - argCnt, argCnt, func2);
 				it = chunk.functions[funcIdx]->code.begin();
 			} else {
 				throw ExecutionError("Cannot call " + valueTypeDesc(type));
 			}
 			break;
 		} case Opcode::RETURN: {
-			Value val = pop();
-			stack->vec.resize(calls.back().localBase); // Pop all locals
-			stack->vec.push_back(val); // Push return value
+			Value val = stack->pop();
+			popLocals(calls.back().localCnt);
+			stack->push(val); // Push return value
 			returnNow = true;
 			break;
 		} case Opcode::MAKE_FUNC: {
 			uint16_t protoIdx = readUI16(it);
 			uint16_t argCnt = readUI16(it);
 			uint16_t upvalueCnt = readUI16(it);
-			std::vector<int16_t> upvalues;
-			upvalues.resize(upvalueCnt);
+			Function* func = new Function(protoIdx, argCnt, upvalueCnt);
 			for(uint16_t i = 0; i < upvalueCnt; i++) {
-				upvalues[i] = readI16(it);
+				int16_t idx = readI16(it);
+				ExecutionRecord& record = calls.back();
+				if(idx >= 0) {
+					auto it = record.upvalueBackPointers.find(idx);
+					if(it != record.upvalueBackPointers.end()) {
+						func->upvalues[i] = it->second;
+					} else {
+						Upvalue* upvalue = new Upvalue(&getLocal(idx), &record, idx);
+						record.upvalueBackPointers[idx] = upvalue;
+						func->upvalues[i] = upvalue;
+					}
+				} else {
+					func->upvalues[i] = &getUpvalue(idx);
+				}
 			}
-			stack->vec.emplace_back(new Function(protoIdx, argCnt));
+			stack->push(Value(func));
 			break;
 		} default:
 			throw ExecutionError("Opcode " + opcodeDesc(op) + " not yet implemented");
 		}
 		
 		if(!returnNow && it == chunk.functions[funcIdx]->code.end()) { // implicit "return nil"
-			stack->vec.resize(calls.back().localBase);
-			stack->vec.emplace_back();
+			popLocals(calls.back().localCnt);
+			stack->push(Value());
 			returnNow = true;
 		}
 		
 		if(returnNow) {
 			returnNow = false;
-			uint32_t leftOnStack = stack->vec.size() - calls.back().localBase;
+			uint32_t leftOnStack = stack->size() - calls.back().localBase;
 			if(leftOnStack != 1)
 				throw ExecutionError("Unexpected number of values on stack at the end of function: " + std::to_string(leftOnStack));
 			calls.pop_back();
@@ -204,10 +233,27 @@ void VM::run(Chunk& chunk) {
 	GC::collect();
 }
 
-inline Value VM::pop() {
-	if(stack->vec.empty())
-		throw ExecutionError("Expected operand, stack empty");
-	Value val = stack->vec.back();
-	stack->vec.pop_back();
-	return val;
+inline Value& VM::getLocal(uint16_t idx) {
+	if(idx >= calls.back().localCnt)
+		throw ExecutionError("Trying to access undefined local");
+	return stack->array[calls.back().localBase + idx];
+}
+
+inline Upvalue& VM::getUpvalue(int16_t idx) {
+	if(idx >= 0) throw ExecutionError("Trying to access invalid upvalue");
+	Function* func = calls.back().func;
+	if(!func) throw ExecutionError("Cannot access upvalues in main chunk");
+	return *func->upvalues[-idx-1];
+}
+
+void VM::popLocals(uint16_t amount) {
+	ExecutionRecord& record = calls.back();
+	for(uint16_t i = record.localCnt - amount; i < record.localCnt; i++) {
+		auto it = record.upvalueBackPointers.find(i);
+		if(it != record.upvalueBackPointers.end()) {
+			it->second->close();
+		}
+	}
+	calls.back().localCnt -= amount;
+	stack->removeN(amount);
 }

@@ -6,14 +6,34 @@
 #include "std.hpp"
 
 
-struct ExecutionRecord {
-	uint32_t localBase;
-	uint32_t localCnt;
+// For upvalues to work efficiently, the stack should not be reallocated, hence:
+const uint32_t STACK_SIZE = 0xffff;
+
+class Stack : public Object {
+public:
+	std::array<Value, STACK_SIZE> array;
+	const Value* base;
+	Value* top;
 	
-	uint32_t funcIdx;
-	uint32_t codeOffset;
+	Stack();
 	
-	ExecutionRecord(uint32_t localBase, uint32_t localCnt);
+	inline Value* begin() { return (Value*) base; }
+	inline Value* end() { return top; }
+	
+	inline void push(Value val) {
+		*(top++) = val;
+		if(size() >= STACK_SIZE) throw ExecutionError("Stack overflow");
+	}
+	inline Value pop() {
+		if(top == base) throw ExecutionError("Stack is empty, cannot pop");
+		return *(--top);
+	}
+	inline uint32_t size() { return top - base; }
+	
+	std::vector<Value> popN(uint32_t n);
+	void removeN(uint32_t n);
+	
+	void markChildren() override;
 };
 
 class VM {
@@ -24,8 +44,12 @@ public:
 	
 private:
 	GC::Root<Namespace> globals;
-	GC::Root<List> stack;
+	GC::Root<Stack> stack;
 	std::vector<ExecutionRecord> calls;
 	
 	Value pop();
+	
+	Value& getLocal(uint16_t idx);
+	Upvalue& getUpvalue(int16_t idx);
+	void popLocals(uint16_t amount);
 };

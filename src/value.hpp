@@ -16,7 +16,6 @@ enum class ValueType : uint8_t {
 	BOOL,
 	INT,
 	REAL,
-	LIST,
 	STR,
 	INTERNAL,
 	C_FUNC,
@@ -132,10 +131,49 @@ public:
 	CFunction(std::function<Value(std::vector<Value>&)> func);
 };
 
+
+class Upvalue;
+class Function;
+
+struct ExecutionRecord {
+	uint32_t localBase;
+	uint32_t localCnt;
+	
+	uint32_t funcIdx;
+	uint32_t codeOffset;
+	
+	Function* func;
+	std::unordered_map<uint16_t, Upvalue*> upvalueBackPointers;
+	
+	ExecutionRecord(uint32_t localBase, uint32_t localCnt, Function* func = nullptr);
+	~ExecutionRecord();
+};
+
+class Upvalue : public GC::GCObject {
+public:
+	Upvalue(Value* local, ExecutionRecord* record, uint16_t localIdx);
+	~Upvalue();
+	
+	void markChildren() override;
+	
+	inline Value& resolve() { return *pointer; }
+	void close();
+	
+private:
+	Value* pointer;
+	Value storage;
+	
+	ExecutionRecord* record;
+	uint16_t localIdx;
+};
+
 class Function : public Object {
 public:
 	uint16_t protoIdx;
 	uint16_t argCnt;
+	std::vector<Upvalue*> upvalues;
 	
-	Function(uint16_t protoIdx, uint16_t argCnt);
+	Function(uint16_t protoIdx, uint16_t argCnt, uint16_t upvalueCnt);
+	
+	void markChildren() override;
 };

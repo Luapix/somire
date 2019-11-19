@@ -15,7 +15,6 @@ std::string valueTypeDesc(ValueType type) {
 	case ValueType::BOOL: return "boolean";
 	case ValueType::INT: return "int";
 	case ValueType::REAL: return "real";
-	case ValueType::LIST: return "list";
 	case ValueType::STR: return "string";
 	case ValueType::INTERNAL: return "internal";
 	case ValueType::C_FUNC: return "C function";
@@ -182,7 +181,7 @@ void Namespace::markChildren() {
 }
 
 
-List::List() : Object(ValueType::LIST) {}
+List::List() : Object(ValueType::INTERNAL) {}
 
 void List::markChildren() {
 	for(Value val : vec) {
@@ -204,4 +203,46 @@ std::string String::toString() {
 
 CFunction::CFunction(std::function<Value(std::vector<Value>&)> func) : Object(ValueType::C_FUNC), func(func) {}
 
-Function::Function(uint16_t protoIdx, uint16_t argCnt) : Object(ValueType::FUNC), protoIdx(protoIdx), argCnt(argCnt) {}
+
+ExecutionRecord::ExecutionRecord(uint32_t localBase, uint32_t localCnt, Function* func)
+	: localBase(localBase), localCnt(localCnt), funcIdx(0), codeOffset(0), func(func) {
+	if(func) {
+		GC::pin(func);
+	}
+}
+
+ExecutionRecord::~ExecutionRecord() {
+	if(func) {
+		GC::unpin(func);
+	}
+}
+
+
+Upvalue::Upvalue(Value* local, ExecutionRecord* record, uint16_t localIdx)
+	: pointer(local), record(record), localIdx(localIdx) {}
+
+Upvalue::~Upvalue() {
+	if(record) {
+		record->upvalueBackPointers.erase(localIdx);
+	}
+}
+
+void Upvalue::markChildren() { storage.mark(); }
+
+void Upvalue::close() {
+	storage = *pointer;
+	pointer = &storage;
+	record = nullptr;
+}
+
+
+Function::Function(uint16_t protoIdx, uint16_t argCnt, uint16_t upvalueCnt)
+	: Object(ValueType::FUNC), protoIdx(protoIdx), argCnt(argCnt) {
+	upvalues.resize(upvalueCnt);
+}
+
+void Function::markChildren() {
+	for(Upvalue* upvalue : upvalues) {
+		upvalue->mark();
+	}
+}
