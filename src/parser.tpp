@@ -129,6 +129,35 @@ std::unique_ptr<Node> Parser<C>::parseExpr(int prec) {
 }
 
 template<typename C>
+std::unique_ptr<Node> Parser<C>::parseMultilineExpr() {
+	std::unique_ptr<Node> exp;
+	if(isCurSymbol("fun")) {
+		nextToken();
+		discardSymbol("(");
+		std::vector<std::string> argNames;
+		if(!isCurSymbol(")")) {
+			while(true) {
+				if(curToken->type != NodeType::ID)
+					error("Expected identifier in argument list, got " + nodeTypeDesc(curToken->type));
+				std::unique_ptr<Node> argToken = nextToken();
+				argNames.push_back(static_cast<NodeId*>(argToken.get())->val);
+				if(isCurSymbol(")"))
+					break;
+				else
+					discardSymbol(",");
+			}
+		}
+		nextToken();
+		discardSymbol(":");
+		exp = std::unique_ptr<Node>(new NodeFunction(argNames, parseIndentedBlock()));
+	} else {
+		exp = parseExpr();
+		finishStatement();
+	}
+	return exp;
+}
+
+template<typename C>
 void Parser<C>::finishStatement() {
 	if(!(curToken->type == NodeType::EOI || curToken->type == NodeType::DEDENT))
 		discardToken(NodeType::NL);
@@ -163,16 +192,14 @@ std::unique_ptr<Node> Parser<C>::parseStatement() {
 			expr = std::unique_ptr<Node>(new NodeFunction(argNames, parseIndentedBlock()));
 		} else {
 			discardSymbol("=");
-			expr = parseExpr();
-			finishStatement();
+			expr = parseMultilineExpr();
 		}
 		return std::unique_ptr<Node>(new NodeLet(id, std::move(expr)));
 	} else if(curToken->type == NodeType::ID && peekToken->type == NodeType::SYM && static_cast<NodeSymbol&>(*peekToken).val == "=") {
 		std::unique_ptr<Node> idToken = nextToken();
 		std::string id = static_cast<NodeId*>(idToken.get())->val;
 		nextToken();
-		std::unique_ptr<Node> expr = parseExpr();
-		finishStatement();
+		std::unique_ptr<Node> expr = parseMultilineExpr();
 		return std::unique_ptr<Node>(new NodeSet(id, std::move(expr)));
 	} else if(isCurSymbol("if")) {
 		nextToken();
@@ -195,12 +222,10 @@ std::unique_ptr<Node> Parser<C>::parseStatement() {
 		return std::unique_ptr<Node>(new NodeWhile(std::move(cond), std::move(block)));
 	} else if(isCurSymbol("return")) {
 		nextToken();
-		std::unique_ptr<Node> expr = parseExpr();
-		finishStatement();
+		std::unique_ptr<Node> expr = parseMultilineExpr();
 		return std::unique_ptr<Node>(new NodeReturn(std::move(expr)));
 	} else {
-		std::unique_ptr<Node> expr = parseExpr();
-		finishStatement();
+		std::unique_ptr<Node> expr = parseMultilineExpr();
 		return std::unique_ptr<Node>(new NodeExprStat(std::move(expr)));
 	}
 }

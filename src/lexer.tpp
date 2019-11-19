@@ -77,7 +77,8 @@ std::unordered_set<std::string> keywords = {
 	"let", "if", "else", "while",
 	"not", "and", "or",
 	"nil", "true", "false",
-	"return"
+	"return",
+	"fun"
 };
 
 template<typename C>
