@@ -120,6 +120,8 @@ public:
 	
 	String(std::string str);
 	
+	Value plus(Value other) override;
+	
 	bool equals(Object& obj) override;
 	
 	std::string toString() override;

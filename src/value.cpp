@@ -203,6 +203,12 @@ void List::markChildren() {
 
 String::String(std::string str) : Object(ValueType::STR), str(str) {}
 
+Value String::plus(Value other) {
+	if(other.type() != ValueType::STR)
+		throw ExecutionError("Cannot add string to " + valueTypeDesc(other.type()));
+	return Value(new String(str + static_cast<String&>(*other.getPointer()).str));
+}
+
 bool String::equals(Object& obj) {
 	return str == static_cast<String&>(obj).str;
 }
