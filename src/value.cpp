@@ -122,6 +122,25 @@ Value Value::modulo(Value other) {
 	}
 }
 
+int intPow(int32_t x, int32_t p) {
+	if(p == 0) return 1;
+	if(p == 1) return x;
+	
+	int32_t halfPow = intPow(x, p/2);
+	if(p % 2 == 0) return halfPow * halfPow;
+	else return x * halfPow * halfPow;
+}
+
+Value Value::power(Value other) {
+	if(isInt() && other.isInt() && other.getInt() >= 0) {
+		return Value(intPow(getInt(), other.getInt()));
+	} else if(isNumeric() && other.isNumeric()) {
+		return Value(std::pow(convertToDouble(), other.convertToDouble()));
+	} else {
+		throw ExecutionError("Cannot multiply " + valueTypeDesc(type()) + " by " + valueTypeDesc(other.type()));
+	}
+}
+
 bool Value::equals(Value other) {
 	if(isInt() && other.isInt()) return getInt() == other.getInt();
 	else if(isNumeric() && other.isNumeric()) return convertToDouble() == other.convertToDouble();

@@ -77,6 +77,11 @@ void VM::run(Chunk& chunk) {
 			Value left = stack->pop();
 			stack->push(left.modulo(right));
 			break;
+		} case Opcode::POWER: {
+			Value right = stack->pop();
+			Value left = stack->pop();
+			stack->push(left.power(right));
+			break;
 		} case Opcode::NOT: {
 			Value val = stack->pop();
 			if(!val.isBool()) throw ExecutionError("Cannot 'not' non-boolean value " + val.toString());
