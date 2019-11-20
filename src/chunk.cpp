@@ -16,6 +16,7 @@ std::unordered_map<Opcode, std::string> opcodeDescTable = {
 	{Opcode::BIN_MINUS, "BIN_MINUS"},
 	{Opcode::MULTIPLY, "MULTIPLY"},
 	{Opcode::DIVIDE, "DIVIDE"},
+	{Opcode::MODULO, "MODULO"},
 	{Opcode::LET, "LET"},
 	{Opcode::POP, "POP"},
 	{Opcode::SET_LOCAL, "SET_LOCAL"},

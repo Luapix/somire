@@ -60,6 +60,7 @@ public:
 	Value minus(Value other);
 	Value divide(Value other);
 	Value multiply(Value other);
+	Value modulo(Value other);
 	
 	bool equals(Value other);
 	bool less(Value other);

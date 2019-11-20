@@ -2,6 +2,7 @@
 
 #include <string>
 #include <sstream>
+#include <cmath>
 
 #include "fpconv.hpp"
 #include "util.hpp"
@@ -106,6 +107,16 @@ Value Value::multiply(Value other) {
 		return Value(getInt() * other.getInt());
 	} else if(isNumeric() && other.isNumeric()) {
 		return Value(convertToDouble() * other.convertToDouble());
+	} else {
+		throw ExecutionError("Cannot multiply " + valueTypeDesc(type()) + " by " + valueTypeDesc(other.type()));
+	}
+}
+
+Value Value::modulo(Value other) {
+	if(isInt() && other.isInt()) {
+		return Value(getInt() % other.getInt());
+	} else if(isNumeric() && other.isNumeric()) {
+		return Value(fmod(convertToDouble(), other.convertToDouble()));
 	} else {
 		throw ExecutionError("Cannot multiply " + valueTypeDesc(type()) + " by " + valueTypeDesc(other.type()));
 	}
