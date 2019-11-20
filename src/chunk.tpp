@@ -131,7 +131,7 @@ void Chunk::loadConstantFromFile(I& it) {
 		uint32_t len = readUI32(it);
 		std::string str(len, '\0');
 		std::copy_n(it, len, str.begin());
-		++it;
+		if(len > 0) ++it;
 		constants->vec.emplace_back(new String(str));
 		break;
 	} default:
