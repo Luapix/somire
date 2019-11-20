@@ -44,9 +44,37 @@ Value writeLine(std::vector<Value>& args) {
 	return Value();
 }
 
+Value listNew(std::vector<Value>& args) {
+	checkNumber(args, 0);
+	return Value(new List());
+}
+
+Value listAdd(std::vector<Value>& args) {
+	if(args.size() <= 1 || args.size() >= 4)
+		throw ExecutionError("Expected 2 or 3 arguments, got " + std::to_string(args.size()));
+	if(args[0].type() != ValueType::LIST)
+		throw ExecutionError("Expected a list for argument 0, got " + valueTypeDesc(args[0].type()));
+	List& list = static_cast<List&>(*args[0].getPointer());
+	if(args.size() == 2) {
+		list.vec.push_back(args[1]);
+	} else {
+		if(args[2].type() != ValueType::INT)
+			throw ExecutionError("Expected a int for argument 2, got " + valueTypeDesc(args[2].type()));
+		int32_t pos = args[2].getInt();
+		if(pos < 0)
+			throw ExecutionError("Provided list index is negative");
+		if(pos > list.vec.size())
+			throw ExecutionError("Provided list index is past the end");
+		list.vec.insert(list.vec.begin() + pos, args[1]);
+	}
+	return Value();
+}
+
 void loadStd(Namespace& ns) {
 	ns.map["log"] = Value(new CFunction(log));
 	ns.map["repr"] = Value(new CFunction(repr));
 	ns.map["write"] = Value(new CFunction(write));
 	ns.map["writeLine"] = Value(new CFunction(writeLine));
+	ns.map["listNew"] = Value(new CFunction(listNew));
+	ns.map["listAdd"] = Value(new CFunction(listAdd));
 }

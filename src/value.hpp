@@ -16,6 +16,7 @@ enum class ValueType : uint8_t {
 	BOOL,
 	INT,
 	REAL,
+	LIST,
 	STR,
 	INTERNAL,
 	C_FUNC,
@@ -111,6 +112,8 @@ public:
 	std::vector<Value> vec;
 	
 	List();
+	
+	std::string toString() override;
 	
 	void markChildren() override;
 };

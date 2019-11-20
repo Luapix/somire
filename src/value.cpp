@@ -16,6 +16,7 @@ std::string valueTypeDesc(ValueType type) {
 	case ValueType::BOOL: return "boolean";
 	case ValueType::INT: return "int";
 	case ValueType::REAL: return "real";
+	case ValueType::LIST: return "list";
 	case ValueType::STR: return "string";
 	case ValueType::INTERNAL: return "internal";
 	case ValueType::C_FUNC: return "C function";
@@ -211,12 +212,23 @@ void Namespace::markChildren() {
 }
 
 
-List::List() : Object(ValueType::INTERNAL) {}
+List::List() : Object(ValueType::LIST) {}
 
 void List::markChildren() {
 	for(Value val : vec) {
 		val.mark();
 	}
+}
+
+std::string List::toString() {
+	std::string res = "[";
+	for(uint32_t i = 0; i < vec.size(); i++) {
+		res += vec[i].toString();
+		if(i != vec.size()-1)
+			res += ", ";
+	}
+	res += "]";
+	return res;
 }
 
 
