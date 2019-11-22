@@ -112,6 +112,7 @@ public:
 	std::vector<Value> vec;
 	
 	List();
+	List(std::vector<Value> vec);
 	
 	std::string toString() override;
 	

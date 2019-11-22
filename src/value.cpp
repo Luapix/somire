@@ -214,6 +214,9 @@ void Namespace::markChildren() {
 
 List::List() : Object(ValueType::LIST) {}
 
+List::List(std::vector<Value> vec)
+	: Object(ValueType::LIST), vec(std::move(vec)) {}
+
 void List::markChildren() {
 	for(Value val : vec) {
 		val.mark();

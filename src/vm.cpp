@@ -218,6 +218,11 @@ void VM::run(Chunk& chunk) {
 			}
 			stack->push(Value(func));
 			break;
+		} case Opcode::MAKE_LIST: {
+			uint16_t valueCnt = readUI16(it);
+			std::vector<Value> vals = stack->popN(valueCnt);
+			stack->push(Value(new List(std::move(vals))));
+			break;
 		} default:
 			throw ExecutionError("Opcode " + opcodeDesc(op) + " not yet implemented");
 		}
