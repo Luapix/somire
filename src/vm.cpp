@@ -2,16 +2,13 @@
 
 #include <iostream>
 #include <string>
-#include <algorithm>
 
 
 Stack::Stack() : Object(ValueType::INTERNAL), base(&array[0]), top((Value*) base) {}
 
 std::vector<Value> Stack::popN(uint32_t n) {
 	if(size() < n) throw ExecutionError("Stack is too small to pop " + std::to_string(n) + " values");
-	std::vector<Value> res;
-	res.resize(n);
-	std::copy(top - n, top, res.begin());
+	std::vector<Value> res(top - n, top);
 	top -= n;
 	return res;
 }
