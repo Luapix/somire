@@ -150,7 +150,8 @@ std::unordered_map<std::string, Opcode> binaryOps = {
 	{"+", Opcode::BIN_PLUS}, {"-", Opcode::BIN_MINUS}, {"*", Opcode::MULTIPLY}, {"/", Opcode::DIVIDE}, {"%", Opcode::MODULO},
 	{"^", Opcode::POWER},
 	{"and", Opcode::AND}, {"or", Opcode::OR},
-	{"==", Opcode::EQUALS}, {"<", Opcode::LESS}, {"<=", Opcode::LESS_OR_EQ}
+	{"==", Opcode::EQUALS}, {"<", Opcode::LESS}, {"<=", Opcode::LESS_OR_EQ},
+	{"index", Opcode::INDEX}
 };
 
 void Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& ctx) {

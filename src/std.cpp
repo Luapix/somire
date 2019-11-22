@@ -61,11 +61,11 @@ Value listAdd(std::vector<Value>& args) {
 		if(args[2].type() != ValueType::INT)
 			throw ExecutionError("Expected a int for argument 2, got " + valueTypeDesc(args[2].type()));
 		int32_t pos = args[2].getInt();
-		if(pos < 0)
+		if(pos < 1)
 			throw ExecutionError("Provided list index is negative");
-		if(pos > list.vec.size())
+		if(pos > list.vec.size() + 1)
 			throw ExecutionError("Provided list index is past the end");
-		list.vec.insert(list.vec.begin() + pos, args[1]);
+		list.vec.insert(list.vec.begin() + (pos - 1), args[1]);
 	}
 	return Value();
 }

@@ -223,6 +223,19 @@ void VM::run(Chunk& chunk) {
 			std::vector<Value> vals = stack->popN(valueCnt);
 			stack->push(Value(new List(std::move(vals))));
 			break;
+		} case Opcode::INDEX: {
+			Value index = stack->pop();
+			Value list = stack->pop();
+			if(list.type() != ValueType::LIST)
+				throw ExecutionError("Cannot index " + valueTypeDesc(list.type()));
+			if(index.type() != ValueType::INT)
+				throw ExecutionError("Cannot index list with " + valueTypeDesc(index.type()));
+			List& list2 = static_cast<List&>(*list.getPointer());
+			int32_t index2 = index.getInt();
+			if(index2 < 1 || index2 > list2.vec.size())
+				throw ExecutionError("List index out of range: " + std::to_string(index2));
+			stack->push(list2.vec[index2-1]);
+			break;
 		} default:
 			throw ExecutionError("Opcode " + opcodeDesc(op) + " not yet implemented");
 		}
