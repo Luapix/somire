@@ -70,6 +70,11 @@ Value listAdd(std::vector<Value>& args) {
 	return Value();
 }
 
+Value listSize(std::vector<Value>& args) {
+	checkTypes(args, { ValueType::LIST });
+	return Value((int32_t) static_cast<List&>(*args[0].getPointer()).vec.size());
+}
+
 void loadStd(Namespace& ns) {
 	ns.map["log"] = Value(new CFunction(log));
 	ns.map["repr"] = Value(new CFunction(repr));
@@ -77,4 +82,5 @@ void loadStd(Namespace& ns) {
 	ns.map["writeLine"] = Value(new CFunction(writeLine));
 	ns.map["listNew"] = Value(new CFunction(listNew));
 	ns.map["listAdd"] = Value(new CFunction(listAdd));
+	ns.map["listSize"] = Value(new CFunction(listSize));
 }
