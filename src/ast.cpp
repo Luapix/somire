@@ -27,6 +27,7 @@ std::string nodeTypeDesc(NodeType type) {
 	case NodeType::RETURN: return "return";
 	case NodeType::FUNC: return "function";
 	case NodeType::BLOCK: return "block";
+	case NodeType::LIST: return "list";
 	default:
 		throw std::runtime_error("Unknown node type");
 	}
@@ -166,4 +167,17 @@ std::string NodeBlock::getDataDesc(std::string prefix) {
 		desc += newPrefix + stat->toString(newPrefix) + "\n";
 	}
 	return ":\n" + desc + prefix;
+}
+
+NodeList::NodeList(std::vector<std::unique_ptr<Node>> val)
+	: Node(NodeType::LIST), val(std::move(val)) {}
+
+std::string NodeList::getDataDesc(std::string prefix) {
+	std::string res = " [";
+	for(uint32_t i = 0; i < val.size(); i++) {
+		res += val[i]->toString();
+		if(i != val.size()-1)
+			res += ", ";
+	}
+	return res + "]";
 }

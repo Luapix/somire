@@ -30,7 +30,7 @@ enum class Opcode : uint8_t {
 	JUMP_IF_NOT,
 	JUMP,
 	CALL, RETURN,
-	MAKE_FUNC
+	MAKE_FUNC, MAKE_LIST
 };
 
 std::string opcodeDesc(Opcode opcode);

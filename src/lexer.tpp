@@ -220,7 +220,8 @@ std::unique_ptr<Node> Lexer<C>::lexString() {
 std::unordered_set<uni_cp> symbolChars = {
 	'=', ',', '(', ')', ':',
 	'+', '-', '*', '/', '^', '%',
-	'<', '>'
+	'<', '>',
+	'[', ']'
 };
 
 std::unordered_set<std::string> symbolStrings = {

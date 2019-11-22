@@ -245,6 +245,16 @@ void Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& ct
 			writeI16(curFunc.codeOut, upvalue);
 		}
 		break;
+	} case NodeType::LIST: {
+		NodeList& expr2 = static_cast<NodeList&>(expr);
+		for(const std::unique_ptr<Node>& val : expr2.val) {
+			compileExpression(curFunc, *val, ctx);
+		}
+		writeUI8(curFunc.codeOut, (uint8_t) Opcode::MAKE_LIST);
+		if(expr2.val.size() > 0xffff)
+			throw CompileError("Too many elements in list literal");
+		writeUI16(curFunc.codeOut, (uint16_t) expr2.val.size());
+		break;
 	} default:
 		throw CompileError("Expression type not implemented: " + nodeTypeDesc(expr.type));
 	}

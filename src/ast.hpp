@@ -21,7 +21,8 @@ enum class NodeType {
 	UNI_OP, BIN_OP, CALL,
 	LET, SET, EXPR_STAT, IF, WHILE, RETURN,
 	FUNC,
-	BLOCK
+	BLOCK,
+	LIST
 };
 
 std::string nodeTypeDesc(NodeType type);
@@ -217,6 +218,16 @@ public:
 	NodeBlock(std::vector<std::unique_ptr<Node>> statements);
 	
 	const std::vector<std::unique_ptr<Node>> statements;
+	
+protected:
+	std::string getDataDesc(std::string prefix) override;
+};
+
+class NodeList : public Node {
+public:
+	NodeList(std::vector<std::unique_ptr<Node>> val);
+	
+	const std::vector<std::unique_ptr<Node>> val;
 	
 protected:
 	std::string getDataDesc(std::string prefix) override;

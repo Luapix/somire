@@ -91,6 +91,19 @@ std::unique_ptr<Node> Parser<C>::parseExpr(int prec) {
 		} else if(symbol->val == "(") {
 			exp = parseExpr(0);
 			discardSymbol(")");
+		} else if(symbol->val == "[") {
+			std::vector<std::unique_ptr<Node>> vals;
+			if(!isCurSymbol("]")) {
+				while(true) {
+					vals.push_back(parseExpr(0));
+					if(isCurSymbol("]"))
+						break;
+					else
+						discardSymbol(",");
+				}
+			}
+			nextToken();
+			exp = std::unique_ptr<Node>(new NodeList(std::move(vals)));
 		} else {
 			error("Unexpected symbol at start of expression: " + symbol->val);
 		}

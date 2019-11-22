@@ -33,7 +33,8 @@ std::unordered_map<Opcode, std::string> opcodeDescTable = {
 	{Opcode::JUMP, "JUMP"},
 	{Opcode::CALL, "CALL"},
 	{Opcode::RETURN, "RETURN"},
-	{Opcode::MAKE_FUNC, "MAKE_FUNC"}
+	{Opcode::MAKE_FUNC, "MAKE_FUNC"},
+	{Opcode::MAKE_LIST, "MAKE_LIST"}
 };
 
 std::string opcodeDesc(Opcode opcode) {
