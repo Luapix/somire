@@ -30,8 +30,8 @@ debug: $(OUTPUT)
 debug-gc: CFLAGS := -DDEBUG_GC $(CFLAGS)
 debug-gc: $(OUTPUT)
 
-profile: CFLAGS := -pg $(CFLAGS)
-profile: LDFLAGS := -pg $(CFLAGS)
+profile: CFLAGS := -O3 -pg $(CFLAGS)
+profile: LDFLAGS := -O3 -pg $(CFLAGS)
 profile: $(OUTPUT)
 
 build/%.o: src/%.cpp src/*.hpp src/*.tpp
