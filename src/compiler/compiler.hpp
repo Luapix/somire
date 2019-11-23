@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <unordered_map>
 
-#include "ast.hpp"
+#include "parser/ast.hpp"
 #include "chunk.hpp"
 
 

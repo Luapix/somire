@@ -1,6 +1,6 @@
 #include "ast.hpp"
 
-#include "util.hpp"
+#include "util/util.hpp"
 
 ParseError::ParseError(const std::string& what)
 	: runtime_error(what) { }

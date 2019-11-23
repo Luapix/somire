@@ -1,9 +1,9 @@
 
 CC     := g++
-CFLAGS := -MD -MP -std=c++11 -Ic:/lib/utf8-cpp-2.3.4
+CFLAGS := -MD -MP -std=c++11 -Ic:/lib/utf8-cpp-2.3.4 -Isrc
 LDFLAGS := 
 
-SRC_FILES := $(wildcard src/*.cpp) src/uni_data.cpp
+SRC_FILES := $(wildcard src/*/*.cpp) src/main.cpp src/util/uni_data.cpp
 OBJ_FILES := $(patsubst src/%.cpp,build/%.o,$(SRC_FILES))
 OUTPUT := somire.exe
 
@@ -19,6 +19,10 @@ test: $(OUTPUT) test.smr
 clean:
 	rm -rf build
 	mkdir build
+	mkdir build/util
+	mkdir build/parser
+	mkdir build/compiler
+	mkdir build/vm
 	rm -f $(OUTPUT)
 
 release: CFLAGS := -O3 $(CFLAGS)
@@ -34,11 +38,11 @@ profile: CFLAGS := -O3 -pg $(CFLAGS)
 profile: LDFLAGS := -O3 -pg $(CFLAGS)
 profile: $(OUTPUT)
 
-build/%.o: src/%.cpp src/*.hpp src/*.tpp
+build/%.o: src/%.cpp src/*/*.hpp src/*/*.tpp
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OUTPUT): $(OBJ_FILES)
-	$(CC) $(LDFLAGS) build/*.o -o $(OUTPUT)
+	$(CC) $(LDFLAGS) build/*/*.o build/main.o -o $(OUTPUT)
 
 src/uni_data.cpp: tools/gen_uni_data.py tools/ppucd.txt
 	cd tools; $(PYTHON3_CMD) gen_uni_data.py

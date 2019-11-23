@@ -4,11 +4,11 @@
 #include <memory>
 #include <string>
 
-#include "ast.hpp"
-#include "chunk.hpp"
-#include "parser.hpp"
-#include "compiler.hpp"
-#include "vm.hpp"
+#include "parser/ast.hpp"
+#include "parser/parser.hpp"
+#include "compiler/chunk.hpp"
+#include "compiler/compiler.hpp"
+#include "vm/vm.hpp"
 
 bool parse(std::string inputPath, std::unique_ptr<Node>& program) {
 	std::ifstream inputFile(inputPath);

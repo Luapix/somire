@@ -6,8 +6,8 @@
 #include <unordered_map>
 #include <iterator>
 
-#include "gc.hpp"
-#include "value.hpp"
+#include "vm/gc.hpp"
+#include "vm/value.hpp"
 
 class CompileError : public std::runtime_error {
 public:

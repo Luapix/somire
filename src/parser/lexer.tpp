@@ -4,8 +4,9 @@
 #include <cstdint>
 #include <stdexcept>
 #include <cassert>
+#include <unordered_set>
 
-#include "uni_util.hpp"
+#include "util/uni_util.hpp"
 
 template<typename C>
 Lexer<C>::Lexer(C start, C end)

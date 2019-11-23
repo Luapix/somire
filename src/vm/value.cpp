@@ -4,8 +4,8 @@
 #include <sstream>
 #include <cmath>
 
-#include "fpconv.hpp"
-#include "util.hpp"
+#include "util/fpconv.hpp"
+#include "util/util.hpp"
 
 ExecutionError::ExecutionError(const std::string& what)
 	: runtime_error("Execution error: " + what) { }
