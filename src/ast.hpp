@@ -22,7 +22,8 @@ enum class NodeType {
 	LET, SET, EXPR_STAT, IF, WHILE, RETURN,
 	FUNC,
 	BLOCK,
-	LIST
+	LIST,
+	PROP
 };
 
 std::string nodeTypeDesc(NodeType type);
@@ -229,6 +230,17 @@ public:
 	
 	const std::vector<std::unique_ptr<Node>> val;
 	
+protected:
+	std::string getDataDesc(std::string prefix) override;
+};
+
+class NodeProp : public Node {
+public:
+	NodeProp(std::unique_ptr<Node> val, std::string prop);
+	
+	const std::unique_ptr<Node> val;
+	const std::string prop;
+
 protected:
 	std::string getDataDesc(std::string prefix) override;
 };

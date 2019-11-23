@@ -28,6 +28,7 @@ std::string nodeTypeDesc(NodeType type) {
 	case NodeType::FUNC: return "function";
 	case NodeType::BLOCK: return "block";
 	case NodeType::LIST: return "list";
+	case NodeType::PROP: return "prop";
 	default:
 		throw std::runtime_error("Unknown node type");
 	}
@@ -181,3 +182,8 @@ std::string NodeList::getDataDesc(std::string prefix) {
 	}
 	return res + "]";
 }
+
+NodeProp::NodeProp(std::unique_ptr<Node> val, std::string prop)
+	: Node(NodeType::PROP), val(std::move(val)), prop(prop) {}
+
+std::string NodeProp::getDataDesc(std::string prefix) { return " " + prefix + " of " + val->toString(prefix); }

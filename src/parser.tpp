@@ -51,7 +51,7 @@ bool Parser<C>::isCurSymbol(std::string sym) {
 std::unordered_set<NodeType> terminals = { NodeType::ID, NodeType::INT, NodeType::REAL, NodeType::STR };
 std::unordered_set<std::string> terminalSymbols = { "nil", "true", "false" };
 std::unordered_set<std::string> prefixOperators = { "+", "-", "not" };
-std::unordered_set<std::string> infixOperators = { "+", "-", "*", "/", "^", "%", "and", "or", "(", "==", "!=", ">", "<", ">=", "<=", "[" };
+std::unordered_set<std::string> infixOperators = { "+", "-", "*", "/", "^", "%", "and", "or", "(", "==", "!=", ">", "<", ">=", "<=", "[", "." };
 std::unordered_set<std::string> rightAssociativeOperators = { "^" };
 
 std::unordered_map<std::string, int> operatorPrecedence = {
@@ -62,7 +62,7 @@ std::unordered_map<std::string, int> operatorPrecedence = {
 	{"+", 8},   {"-", 8},
 	{"*", 10},  {"/", 10}, {"%", 10},
 	{"^", 12},
-	{"(", 14}, {"[", 14}
+	{"(", 14}, {"[", 14}, {".", 14}
 };
 
 template<typename C>
@@ -130,6 +130,11 @@ std::unique_ptr<Node> Parser<C>::parseExpr(int prec) {
 			} else if(symbol->val == "[") {
 				exp = std::unique_ptr<Node>(new NodeBinary("index", std::move(exp), parseExpr(0)));
 				discardSymbol("]");
+			} else if(symbol->val == ".") {
+				if(curToken->type != NodeType::ID)
+					error("Expected id after '.', got " + curToken->toString());
+				std::unique_ptr<NodeId> prop(static_cast<NodeId*>(nextToken().release()));
+				exp = std::unique_ptr<Node>(new NodeProp(std::move(exp), prop->val));
 			} else {
 				int prec2 = operatorPrecedence[symbol->val];
 				if(rightAssociativeOperators.find(symbol->val) != rightAssociativeOperators.end())
