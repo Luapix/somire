@@ -1,6 +1,6 @@
 
 CC     := g++
-CFLAGS := -MD -MP -std=c++11 -Ic:/lib/utf8-cpp-2.3.4 -Isrc
+CFLAGS := -MD -MP -std=c++17 -Ic:/lib/utf8-cpp-2.3.4 -Isrc
 LDFLAGS := 
 
 SRC_FILES := $(wildcard src/*/*.cpp) src/main.cpp src/util/uni_data.cpp

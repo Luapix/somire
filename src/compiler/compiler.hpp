@@ -3,18 +3,24 @@
 #include <memory>
 #include <stdexcept>
 #include <unordered_map>
+#include <optional>
 
 #include "parser/ast.hpp"
 #include "chunk.hpp"
 #include "types.hpp"
 
 
+struct Variable {
+	int16_t idx;
+	Type* type;
+};
+
 class Context {
 public:
 	Context(bool isFuncTop, Context* parent);
 	
-	bool getVariable(std::string var, int16_t& idx);
-	void defineLocal(std::string var);
+	std::optional<Variable> getVariable(std::string varName);
+	void defineLocal(std::string var, Type* type);
 	uint16_t getLocalCount();
 	
 	std::vector<int16_t>& getFunctionUpvalues();
@@ -23,7 +29,7 @@ private:
 	bool isFuncTop;
 	Context* parent;
 	
-	std::unordered_map<std::string, int16_t> variables;
+	std::unordered_map<std::string, Variable> variables;
 	std::vector<int16_t> upvalues;
 	int16_t nextLocal;
 	int16_t nextUpvalue;
@@ -42,6 +48,6 @@ private:
 	std::vector<int16_t> compileFunction(NodeBlock& block, std::vector<std::string> argNames, Context* parent = nullptr);
 	void compileBlock(FunctionChunk& curFunc, NodeBlock& block, Context& ctx, bool popLocals = true);
 	void compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx);
-	Type& compileExpression(FunctionChunk& curFunc, Node& expr, Context& ctx);
+	Type* compileExpression(FunctionChunk& curFunc, Node& expr, Context& ctx);
 	void compileConstant(FunctionChunk& curFunc, Value val);
 };

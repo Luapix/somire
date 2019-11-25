@@ -7,32 +7,31 @@ Context::Context(bool isFuncTop, Context* parent)
 	}
 }
 
-bool Context::getVariable(std::string var, int16_t& idx) {
-	auto it = variables.find(var);
+std::optional<Variable> Context::getVariable(std::string varName) {
+	auto it = variables.find(varName);
 	if(it != variables.end()) { // if local or known upvalue
-		idx = it->second;
-		return true;
+		return it->second;
 	} else if(isFuncTop) { // look in surrounding function
 		if(parent) {
-			int16_t idx2;
-			if(parent->getVariable(var, idx2)) { // add new upvalue
-				idx = nextUpvalue--;
-				variables[var] = idx;
-				upvalues.push_back(idx2); // save what the upvalue points to
-				return true;
+			std::optional<Variable> var = parent->getVariable(varName);
+			if(var) { // add new upvalue
+				Variable upvalue = { nextUpvalue--, var->type };
+				variables[varName] = upvalue;
+				upvalues.push_back(var->idx); // save what the upvalue points to
+				return upvalue;
 			} else { // global or undefined
-				return false;
+				return {};
 			}
 		} else { // global or undefined
-			return false;
+			return {};
 		}
 	} else {
-		return parent->getVariable(var, idx);
+		return parent->getVariable(varName);
 	}
 }
 
-void Context::defineLocal(std::string var) {
-	variables[var] = nextLocal++;
+void Context::defineLocal(std::string var, Type* type) {
+	variables[var] = { nextLocal++, type };
 	innerLocalCount++;
 }
 
@@ -63,7 +62,7 @@ std::vector<int16_t> Compiler::compileFunction(NodeBlock& block, std::vector<std
 	curChunk->functions.emplace_back(new FunctionChunk());
 	Context ctx(true, parent);
 	for(std::string arg : argNames) {
-		ctx.defineLocal(arg);
+		ctx.defineLocal(arg, &nilType); // TODO
 	}
 	compileBlock(*curChunk->functions.back(), block, ctx, false); // no need to pop locals at the end of a function
 	return ctx.getFunctionUpvalues();
@@ -84,20 +83,20 @@ void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx
 	case NodeType::LET: {
 		NodeLet& stat2 = static_cast<NodeLet&>(stat);
 		if(stat2.exp->type == NodeType::FUNC)
-			ctx.defineLocal(stat2.id); // Define in advance to allow for recursion
-		compileExpression(curFunc, *stat2.exp, ctx);
+			ctx.defineLocal(stat2.id, &functionType); // Define in advance to allow for recursion
+		Type* valType = compileExpression(curFunc, *stat2.exp, ctx);
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::LET);
 		if(stat2.exp->type != NodeType::FUNC)
-			ctx.defineLocal(stat2.id);
+			ctx.defineLocal(stat2.id, valType);
 		break;
 	} case NodeType::SET: {
 		NodeSet& stat2 = static_cast<NodeSet&>(stat);
-		int16_t idx;
-		if(!ctx.getVariable(stat2.id, idx))
+		std::optional<Variable> var = ctx.getVariable(stat2.id);
+		if(!var)
 			throw CompileError("Trying to set global or undefined variable " + stat2.id); // for now, no modifying globals
 		compileExpression(curFunc, *stat2.exp, ctx);
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::SET_LOCAL);
-		writeI16(curFunc.codeOut, idx);
+		writeI16(curFunc.codeOut, var->idx);
 		break;
 	} case NodeType::EXPR_STAT:
 		compileExpression(curFunc, *static_cast<NodeExprStat&>(stat).exp, ctx);
@@ -154,59 +153,60 @@ std::unordered_map<std::string, Opcode> binaryOps = {
 	{"index", Opcode::INDEX}
 };
 
-Type& Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& ctx) {
+Type* Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& ctx) {
 	switch(expr.type) {
 	case NodeType::INT:
 		compileConstant(curFunc, Value(static_cast<NodeInt&>(expr).val));
-		return intType;
+		return &intType;
 	case NodeType::REAL:
 		compileConstant(curFunc, Value(static_cast<NodeReal&>(expr).val));
-		return realType;
+		return &realType;
 	case NodeType::STR:
 		compileConstant(curFunc, Value(new String(static_cast<NodeString&>(expr).val)));
-		return stringType;
+		return &stringType;
 	case NodeType::SYM: {
 		NodeSymbol& expr2 = static_cast<NodeSymbol&>(expr);
 		if(expr2.val == "nil") {
 			compileConstant(curFunc, Value::nil());
-			return nilType;
+			return &nilType;
 		} else if(expr2.val == "true") {
 			compileConstant(curFunc, Value(true));
-			return boolType;
+			return &boolType;
 		} else if(expr2.val == "false") {
 			compileConstant(curFunc, Value(false));
-			return boolType;
+			return &boolType;
 		} else {
 			throw CompileError("Unexpected keyword in expression: " + expr2.val);
 		}
 	} case NodeType::ID: {
 		NodeId& expr2 = static_cast<NodeId&>(expr);
-		int16_t idx;
-		if(ctx.getVariable(expr2.val, idx)) {
+		std::optional<Variable> var = ctx.getVariable(expr2.val);
+		if(var) {
 			writeUI8(curFunc.codeOut, (uint8_t) Opcode::LOCAL);
-			writeI16(curFunc.codeOut, idx);
+			writeI16(curFunc.codeOut, var->idx);
+			return var->type;
 		} else {
 			writeUI8(curFunc.codeOut, (uint8_t) Opcode::GLOBAL);
 			writeUI16(curFunc.codeOut, curChunk->constants->vec.size());
 			curChunk->constants->vec.emplace_back(new String(expr2.val));
+			return &nilType; // TODO
 		}
-		return nilType; // TODO
 	} case NodeType::UNI_OP: {
 		NodeUnary& expr2 = static_cast<NodeUnary&>(expr);
-		Type& valType = compileExpression(curFunc, *expr2.val, ctx);
+		Type* valType = compileExpression(curFunc, *expr2.val, ctx);
 		if(expr2.op == "-") {
 			writeUI8(curFunc.codeOut, (uint8_t) Opcode::UNI_MINUS);
 			return valType;
 		} else if(expr2.op == "not") {
 			writeUI8(curFunc.codeOut, (uint8_t) Opcode::NOT);
-			return boolType;
+			return &boolType;
 		} else {
 			throw CompileError("Unknown unary operator: " + expr2.op);
 		}
 	} case NodeType::BIN_OP: {
 		NodeBinary& expr2 = static_cast<NodeBinary&>(expr);
-		Type& type1 = compileExpression(curFunc, *expr2.left, ctx);
-		Type& type2 = compileExpression(curFunc, *expr2.right, ctx);
+		Type* type1 = compileExpression(curFunc, *expr2.left, ctx);
+		Type* type2 = compileExpression(curFunc, *expr2.right, ctx);
 		auto it = binaryOps.find(expr2.op);
 		if(it != binaryOps.end()) {
 			writeUI8(curFunc.codeOut, (uint8_t) it->second);
@@ -222,7 +222,7 @@ Type& Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& c
 		} else {
 			throw CompileError("Unknown binary operator: " + expr2.op);
 		}
-		return nilType; // TODO
+		return &nilType; // TODO
 	} case NodeType::CALL: {
 		NodeCall& expr2 = static_cast<NodeCall&>(expr);
 		for(auto& arg : expr2.args) {
@@ -231,7 +231,7 @@ Type& Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& c
 		compileExpression(curFunc, *expr2.func, ctx);
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::CALL);
 		writeUI16(curFunc.codeOut, (uint16_t) expr2.args.size());
-		return nilType; // TODO;
+		return &nilType; // TODO;
 	} case NodeType::FUNC: {
 		NodeFunction& expr2 = static_cast<NodeFunction&>(expr);
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::MAKE_FUNC);
@@ -248,7 +248,7 @@ Type& Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& c
 		for(int16_t upvalue : upvalues) {
 			writeI16(curFunc.codeOut, upvalue);
 		}
-		return functionType;
+		return &functionType;
 	} case NodeType::LIST: {
 		NodeList& expr2 = static_cast<NodeList&>(expr);
 		for(const std::unique_ptr<Node>& val : expr2.val) {
@@ -258,7 +258,7 @@ Type& Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& c
 		if(expr2.val.size() > 0xffff)
 			throw CompileError("Too many elements in list literal");
 		writeUI16(curFunc.codeOut, (uint16_t) expr2.val.size());
-		return listType;
+		return &listType;
 	} default:
 		throw CompileError("Expression type not implemented: " + nodeTypeDesc(expr.type));
 	}
