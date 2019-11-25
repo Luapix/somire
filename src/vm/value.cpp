@@ -10,33 +10,13 @@
 ExecutionError::ExecutionError(const std::string& what)
 	: runtime_error("Execution error: " + what) { }
 
-std::string valueTypeDesc(ValueType type) {
-	switch(type) {
-	case ValueType::NIL: return "nil";
-	case ValueType::BOOL: return "boolean";
-	case ValueType::INT: return "int";
-	case ValueType::REAL: return "real";
-	case ValueType::LIST: return "list";
-	case ValueType::STR: return "string";
-	case ValueType::INTERNAL: return "internal";
-	case ValueType::C_FUNC: return "C function";
-	case ValueType::FUNC: return "function";
-	default:
-		throw std::runtime_error("Unknown type");
-	}
-}
 
-
-Value::Value() : asBits(NIL) {}
-
-Value::Value(bool boolean) : asBits(BOOL_TAG | (int) boolean) {}
-
-Value::Value(int32_t integer) {
-	asBits = INT_TAG | (uint32_t) integer;
-}
+Value Value::nil() { return Value::fromBits((uint64_t) NIL); }
+Value::Value(bool boolean) : asBits(BOOL_TAG | (uint32_t) boolean) {}
+Value::Value(int32_t integer) : asBits(INT_TAG | (uint32_t) integer) {}
 
 Value::Value(double real) {
-	if(real > POINTER_TAG)
+	if(real > OBJECT_TAG)
 		throw std::runtime_error("No payload is allowed in quiet NaNs");
 	asDouble = real;
 }
@@ -47,28 +27,19 @@ Value::Value(Object* obj) {
 		throw std::runtime_error("Trying to store null object");
 	if(add > 0xffffffffffff)
 		throw std::runtime_error("Can only store 48-bit pointers to objects");
-	asBits = POINTER_TAG | add;
+	asBits = OBJECT_TAG | add;
 }
 
 
 void Value::mark() {
-	if(isPointer()) getPointer()->mark();
-}
-
-ValueType Value::type() {
-	if(isNil()) return ValueType::NIL;
-	else if(isBool()) return ValueType::BOOL;
-	else if(isInt()) return ValueType::INT;
-	else if(isReal()) return ValueType::REAL;
-	else if(isPointer()) return getPointer()->type;
-	else throw std::runtime_error("Invalid value");
+	if(isObject()) getObject()->mark();
 }
 
 Value Value::negate() {
 	if(isInt()) return Value(-getInt());
 	else if(isReal()) return Value(-asDouble);
-	else if(isPointer()) return getPointer()->negate();
-	else throw ExecutionError("Cannot negate " + valueTypeDesc(type()));
+	else if(isObject()) return getObject()->negate();
+	else throw ExecutionError("Cannot negate " + getTypeDesc());
 }
 
 Value Value::plus(Value other) {
@@ -76,10 +47,10 @@ Value Value::plus(Value other) {
 		return Value(getInt() + other.getInt());
 	} else if(isNumeric() && other.isNumeric()) {
 		return Value(convertToDouble() + other.convertToDouble());
-	} else if(isPointer()) {
-		return getPointer()->plus(other);
+	} else if(isObject()) {
+		return getObject()->plus(other);
 	} else {
-		throw ExecutionError("Cannot add " + valueTypeDesc(type()) + " to " + valueTypeDesc(other.type()));
+		throw ExecutionError("Cannot add " + getTypeDesc() + " to " + other.getTypeDesc());
 	}
 }
 
@@ -89,7 +60,7 @@ Value Value::minus(Value other) {
 	} else if(isNumeric() && other.isNumeric()) {
 		return Value(convertToDouble() - other.convertToDouble());
 	} else {
-		throw ExecutionError("Cannot substract " + valueTypeDesc(type()) + " from " + valueTypeDesc(other.type()));
+		throw ExecutionError("Cannot substract " + getTypeDesc() + " from " + other.getTypeDesc());
 	}
 }
 
@@ -99,7 +70,7 @@ Value Value::divide(Value other) {
 		if(x2 == 0.0) throw ExecutionError("Cannot divide by zero");
 		return Value(convertToDouble() / x2);
 	} else {
-		throw ExecutionError("Cannot divide " + valueTypeDesc(type()) + " by " + valueTypeDesc(other.type()));
+		throw ExecutionError("Cannot divide " + getTypeDesc() + " by " + other.getTypeDesc());
 	}
 }
 
@@ -109,7 +80,7 @@ Value Value::multiply(Value other) {
 	} else if(isNumeric() && other.isNumeric()) {
 		return Value(convertToDouble() * other.convertToDouble());
 	} else {
-		throw ExecutionError("Cannot multiply " + valueTypeDesc(type()) + " by " + valueTypeDesc(other.type()));
+		throw ExecutionError("Cannot multiply " + getTypeDesc() + " by " + other.getTypeDesc());
 	}
 }
 
@@ -119,7 +90,7 @@ Value Value::modulo(Value other) {
 	} else if(isNumeric() && other.isNumeric()) {
 		return Value(fmod(convertToDouble(), other.convertToDouble()));
 	} else {
-		throw ExecutionError("Cannot multiply " + valueTypeDesc(type()) + " by " + valueTypeDesc(other.type()));
+		throw ExecutionError("Cannot multiply " + getTypeDesc() + " by " + other.getTypeDesc());
 	}
 }
 
@@ -138,30 +109,45 @@ Value Value::power(Value other) {
 	} else if(isNumeric() && other.isNumeric()) {
 		return Value(std::pow(convertToDouble(), other.convertToDouble()));
 	} else {
-		throw ExecutionError("Cannot multiply " + valueTypeDesc(type()) + " by " + valueTypeDesc(other.type()));
+		throw ExecutionError("Cannot multiply " + getTypeDesc() + " by " + other.getTypeDesc());
 	}
 }
 
 bool Value::equals(Value other) {
 	if(isInt() && other.isInt()) return getInt() == other.getInt();
-	else if(isNumeric() && other.isNumeric()) return convertToDouble() == other.convertToDouble();
-	else if(type() != other.type()) return false;
-	else if(isNil()) return true;
-	else if(isBool()) return getBool() == other.getBool();
-	else if(isPointer()) return getPointer()->equals(*other.getPointer());
+	else if(isNumeric()) return other.isNumeric() && convertToDouble() == other.convertToDouble();
+	else if(isNil()) return other.isNil();
+	else if(isBool()) return other.isBool() && getBool() == other.getBool();
+	else if(isObject()) return other.isObject() && getObject()->equals(*other.getObject());
 	else throw std::runtime_error("Invalid value");
 }
 
 bool Value::less(Value other) {
 	if(isInt() && other.isInt()) return getInt() < other.getInt();
 	else if(isNumeric() && other.isNumeric()) return convertToDouble() < other.convertToDouble();
-	else throw ExecutionError("Cannot test if " + valueTypeDesc(type()) + " is less than " + valueTypeDesc(other.type()));
+	else throw ExecutionError("Cannot test if " + getTypeDesc() + " is less than " + other.getTypeDesc());
 }
 
 bool Value::less_or_eq(Value other) {
 	if(isInt() && other.isInt()) return getInt() <= other.getInt();
 	else if(isNumeric() && other.isNumeric()) return convertToDouble() <= other.convertToDouble();
-	else throw ExecutionError("Cannot test if " + valueTypeDesc(type()) + " is less than or equal to " + valueTypeDesc(other.type()));
+	else throw ExecutionError("Cannot test if " + getTypeDesc() + " is less than or equal to " + other.getTypeDesc());
+}
+
+std::string Value::getTypeDesc() {
+	if(isNil()) {
+		return "nil";
+	} else if(isBool()) {
+		return "bool";
+	} else if(isInt()) {
+		return "int";
+	} else if(isReal()) {
+		return "real";
+	} else if(isObject()) {
+		return getObject()->getTypeDesc();
+	} else {
+		throw std::runtime_error("Invalid value");
+	}
 }
 
 std::string Value::toString() {
@@ -174,22 +160,20 @@ std::string Value::toString() {
 	} else if(isReal()) {
 		char buf[24];
 		return std::string(buf, fpconv_dtoa(asDouble, buf));
-	} else if(isPointer()) {
-		return getPointer()->toString();
+	} else if(isObject()) {
+		return getObject()->toString();
 	} else {
 		throw std::runtime_error("Invalid value");
 	}
 }
 
 
-Object::Object(ValueType type) : type(type) {}
-
 Value Object::negate() {
-	throw ExecutionError("Can't negate " + valueTypeDesc(type));
+	throw ExecutionError("Can't negate " + getTypeDesc());
 }
 
 Value Object::plus(Value other) {
-	throw ExecutionError("Cannot add " + valueTypeDesc(type) + " to " + valueTypeDesc(other.type()));
+	throw ExecutionError("Cannot add " + getTypeDesc() + " to " + other.getTypeDesc());
 }
 
 bool Object::equals(Object& obj) {
@@ -198,12 +182,10 @@ bool Object::equals(Object& obj) {
 
 std::string Object::toString() {
 	std::stringstream ss;
-	ss << "<" << valueTypeDesc(type) << " " << this << ">";
+	ss << "<" << getTypeDesc() << " " << this << ">";
 	return ss.str();
 }
 
-
-Namespace::Namespace() : Object(ValueType::INTERNAL) {}
 
 void Namespace::markChildren() {
 	for(auto& pair : map) {
@@ -212,10 +194,7 @@ void Namespace::markChildren() {
 }
 
 
-List::List() : Object(ValueType::LIST) {}
-
-List::List(std::vector<Value> vec)
-	: Object(ValueType::LIST), vec(std::move(vec)) {}
+List::List(std::vector<Value>&& vec) : vec(std::move(vec)) {}
 
 void List::markChildren() {
 	for(Value val : vec) {
@@ -235,12 +214,13 @@ std::string List::toString() {
 }
 
 
-String::String(std::string str) : Object(ValueType::STR), str(str) {}
+String::String(std::string str) : str(str) {}
 
 Value String::plus(Value other) {
-	if(other.type() != ValueType::STR)
-		throw ExecutionError("Cannot add string to " + valueTypeDesc(other.type()));
-	return Value(new String(str + static_cast<String&>(*other.getPointer()).str));
+	String* otherStr;
+	if(otherStr = other.get<String>())
+		throw ExecutionError("Cannot add string to " + other.getTypeDesc());
+	return Value(new String(str + otherStr->str));
 }
 
 bool String::equals(Object& obj) {
@@ -252,7 +232,7 @@ std::string String::toString() {
 }
 
 
-CFunction::CFunction(std::function<Value(std::vector<Value>&)> func) : Object(ValueType::C_FUNC), func(func) {}
+CFunction::CFunction(std::function<Value(std::vector<Value>&)> func) : func(func) {}
 
 
 ExecutionRecord::ExecutionRecord(uint32_t localBase, uint32_t localCnt, Function* func)
@@ -288,7 +268,7 @@ void Upvalue::close() {
 
 
 Function::Function(uint16_t protoIdx, uint16_t argCnt, uint16_t upvalueCnt)
-	: Object(ValueType::FUNC), protoIdx(protoIdx), argCnt(argCnt) {
+	: protoIdx(protoIdx), argCnt(argCnt) {
 	upvalues.resize(upvalueCnt);
 }
 

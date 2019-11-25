@@ -16,6 +16,10 @@ public:
 
 constexpr std::array<uint8_t, 8> magicBytes = { 'S','o','m','i','r','&', 0, 1 };
 
+enum class ConstantType : uint8_t {
+	NIL, BOOL, INT, REAL, STR
+};
+
 enum class Opcode : uint8_t {
 	IGNORE,
 	CONSTANT,

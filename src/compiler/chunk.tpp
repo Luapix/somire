@@ -85,56 +85,53 @@ double readDouble(I& it) {
 
 template <typename O>
 void Chunk::writeConstantToFile(O& it, Value val) {
-	ValueType type = val.type();
-	writeUI8(it, (uint8_t) type);
-	
-	switch(type) {
-	case ValueType::NIL:
-		break;
-	case ValueType::BOOL: {
+	if(val.isNil()) {
+		writeUI8(it, (uint8_t) ConstantType::NIL);
+	} else if(val.isBool()) {
+		writeUI8(it, (uint8_t) ConstantType::BOOL);
 		writeUI8(it, (uint8_t) val.getBool());
-		break;
-	} case ValueType::INT: {
+	} else if(val.isInt()) {
+		writeUI8(it, (uint8_t) ConstantType::INT);
 		writeI32(it, val.getInt());
-		break;
-	} case ValueType::REAL: {
+	} else if(val.isReal()) {
+		writeUI8(it, (uint8_t) ConstantType::REAL);
 		writeDouble(it, val.getReal());
-		break;
-	} case ValueType::STR: {
-		std::string& str = static_cast<String&>(*val.getPointer()).str;
-		writeUI32(it, (uint32_t) str.size());
-		std::copy(str.begin(), str.end(), it);
-		break;
-	} default:
-		throw std::runtime_error("Constant serialization is unimplemented for type " + valueTypeDesc(type));
+	} else {
+		String* strPointer;
+		if(val.isObject() && (strPointer = val.get<String>())) {
+			std::string& str = strPointer->str;
+			writeUI8(it, (uint8_t) ConstantType::STR);
+			writeUI32(it, (uint32_t) str.size());
+			std::copy(str.begin(), str.end(), it);
+		} else {
+			throw std::runtime_error("Type " + val.getTypeDesc() + " cannot be a constant");
+		}
 	}
 }
 
 template <typename I>
 void Chunk::loadConstantFromFile(I& it) {
-	ValueType type = (ValueType) readUI8(it);
+	ConstantType type = (ConstantType) readUI8(it);
 	
 	switch(type) {
-	case ValueType::NIL:
-		constants->vec.push_back(Value());
+	case ConstantType::NIL:
+		constants->vec.push_back(Value::nil());
 		break;
-	case ValueType::BOOL:
+	case ConstantType::BOOL:
 		constants->vec.push_back(Value((bool) readUI8(it)));
 		break;
-	case ValueType::INT:
+	case ConstantType::INT:
 		constants->vec.emplace_back(readI32(it));
 		break;
-	case ValueType::REAL:
+	case ConstantType::REAL:
 		constants->vec.emplace_back(readDouble(it));
 		break;
-	case ValueType::STR: {
+	case ConstantType::STR: {
 		uint32_t len = readUI32(it);
 		std::string str(len, '\0');
 		std::copy_n(it, len, str.begin());
 		if(len > 0) ++it;
 		constants->vec.emplace_back(new String(str));
 		break;
-	} default:
-		throw std::runtime_error("Constant unserialization is unimplemented for type " + std::to_string((int) type));
-	}
+	}}
 }

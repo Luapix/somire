@@ -8,13 +8,17 @@ void checkNumber(std::vector<Value>& values, uint32_t number) {
 		throw ExecutionError("Expected " + std::to_string(number) + " arguments, got " + std::to_string(values.size()));
 }
 
-void checkTypes(std::vector<Value>& values, std::vector<ValueType> types) {
-	checkNumber(values, types.size());
-	for(uint32_t i = 0; i < values.size(); i++) {
-		ValueType type = values[i].type();
-		if(type != types[i])
-			throw ExecutionError("Expected a " + valueTypeDesc(types[i]) + " for argument " + std::to_string(i) + ", got " + valueTypeDesc(type));
-	}
+void expectType(Value val, bool isType, int argument, std::string expectedType) {
+	if(!isType)
+		throw ExecutionError("Expected a " + expectedType + " for argument " + std::to_string(argument) + ", got " + val.getTypeDesc());
+}
+
+template<typename T>
+T& expectObject(Value val, int argument, std::string expectedType) {
+	T* obj = val.get<T>();
+	if(!obj)
+		throw ExecutionError("Expected a " + expectedType + " for argument " + std::to_string(argument) + ", got " + val.getTypeDesc());
+	return *obj;
 }
 
 Value log(std::vector<Value>& args) {
@@ -24,7 +28,7 @@ Value log(std::vector<Value>& args) {
 			std::cout << " ";
 	}
 	std::cout << std::endl;
-	return Value();
+	return Value::nil();
 }
 
 Value repr(std::vector<Value>& args) {
@@ -33,15 +37,17 @@ Value repr(std::vector<Value>& args) {
 }
 
 Value write(std::vector<Value>& args) {
-	checkTypes(args, { ValueType::STR });
-	std::cout << static_cast<String*>(args[0].getPointer())->str;
-	return Value();
+	checkNumber(args, 1);
+	String& s = expectObject<String>(args[0], 0, "string");
+	std::cout << s.str;
+	return Value::nil();
 }
 
 Value writeLine(std::vector<Value>& args) {
-	checkTypes(args, { ValueType::STR });
-	std::cout << static_cast<String*>(args[0].getPointer())->str << std::endl;
-	return Value();
+	checkNumber(args, 1);
+	String& s = expectObject<String>(args[0], 0, "string");
+	std::cout << s.str << std::endl;
+	return Value::nil();
 }
 
 Value listNew(std::vector<Value>& args) {
@@ -52,14 +58,11 @@ Value listNew(std::vector<Value>& args) {
 Value listAdd(std::vector<Value>& args) {
 	if(args.size() <= 1 || args.size() >= 4)
 		throw ExecutionError("Expected 2 or 3 arguments, got " + std::to_string(args.size()));
-	if(args[0].type() != ValueType::LIST)
-		throw ExecutionError("Expected a list for argument 0, got " + valueTypeDesc(args[0].type()));
-	List& list = static_cast<List&>(*args[0].getPointer());
+	List& list = expectObject<List>(args[0], 0, "list");
 	if(args.size() == 2) {
 		list.vec.push_back(args[1]);
 	} else {
-		if(args[2].type() != ValueType::INT)
-			throw ExecutionError("Expected a int for argument 2, got " + valueTypeDesc(args[2].type()));
+		expectType(args[2], args[2].isInt(), 2, "int");
 		int32_t pos = args[2].getInt();
 		if(pos < 1)
 			throw ExecutionError("Provided list index is negative");
@@ -67,12 +70,13 @@ Value listAdd(std::vector<Value>& args) {
 			throw ExecutionError("Provided list index is past the end");
 		list.vec.insert(list.vec.begin() + (pos - 1), args[1]);
 	}
-	return Value();
+	return Value::nil();
 }
 
 Value listSize(std::vector<Value>& args) {
-	checkTypes(args, { ValueType::LIST });
-	return Value((int32_t) static_cast<List&>(*args[0].getPointer()).vec.size());
+	checkNumber(args, 1);
+	List& list = expectObject<List>(args[0], 0, "list");
+	return Value((int32_t) list.vec.size());
 }
 
 void loadStd(Namespace& ns) {

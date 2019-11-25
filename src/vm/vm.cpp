@@ -4,7 +4,7 @@
 #include <string>
 
 
-Stack::Stack() : Object(ValueType::INTERNAL), base(&array[0]), top((Value*) base) {}
+Stack::Stack() : base(&array[0]), top((Value*) base) {}
 
 std::vector<Value> Stack::popN(uint32_t n) {
 	if(size() < n) throw ExecutionError("Stack is too small to pop " + std::to_string(n) + " values");
@@ -137,8 +137,9 @@ void VM::run(Chunk& chunk) {
 		} case Opcode::GLOBAL: {
 			uint16_t constantIdx = readUI16(it);
 			Value nameValue = chunk.constants->vec.at(constantIdx);
-			if(nameValue.type() != ValueType::STR) throw ExecutionError("Tring to access global by name " + nameValue.toString());
-			std::string name = static_cast<String*>(nameValue.getPointer())->str;
+			String* nameStr = nameValue.get<String>();
+			if(!nameStr) throw ExecutionError("Tring to access global by name " + nameValue.toString());
+			std::string name = nameStr->str;
 			auto it = globals->map.find(name);
 			if(it == globals->map.end()) throw ExecutionError("Tring to access undefined global " + name);
 			stack->push(it->second);
@@ -156,28 +157,28 @@ void VM::run(Chunk& chunk) {
 		case Opcode::CALL: {
 			uint16_t argCnt = readUI16(it);
 			
-			Value func = stack->pop();
-			ValueType type = func.type();
+			Value funcValue = stack->pop();
 			
-			if(type == ValueType::C_FUNC) {
+			CFunction* cfunc;
+			Function* func;
+			if(cfunc = funcValue.get<CFunction>()) {
 				// Pop the arguments off the stack
 				std::vector<Value> args = stack->popN(argCnt);
-				Value res = static_cast<CFunction*>(func.getPointer())->func(args);
+				Value res = cfunc->func(args);
 				stack->push(res);
-			} else if(type == ValueType::FUNC) {
+			} else if(func = funcValue.get<Function>()) {
 				// We leave the arguments on the stack, they will become locals
-				Function* func2 = static_cast<Function*>(func.getPointer());
-				if(argCnt != func2->argCnt)
-					throw ExecutionError("Expected " + std::to_string(func2->argCnt) + " arguments, got " + std::to_string(argCnt));
+				if(argCnt != func->argCnt)
+					throw ExecutionError("Expected " + std::to_string(func->argCnt) + " arguments, got " + std::to_string(argCnt));
 				
 				calls.back()->funcIdx = funcIdx;
 				calls.back()->codeOffset = it - chunk.functions[funcIdx]->code.begin();
 				
-				funcIdx = func2->protoIdx;
-				calls.emplace_back(new ExecutionRecord(stack->size() - argCnt, argCnt, func2));
+				funcIdx = func->protoIdx;
+				calls.emplace_back(new ExecutionRecord(stack->size() - argCnt, argCnt, func));
 				it = chunk.functions[funcIdx]->code.begin();
 			} else {
-				throw ExecutionError("Cannot call " + valueTypeDesc(type));
+				throw ExecutionError("Cannot call " + funcValue.getTypeDesc());
 			}
 			break;
 		} case Opcode::RETURN: {
@@ -222,16 +223,16 @@ void VM::run(Chunk& chunk) {
 			break;
 		} case Opcode::INDEX: {
 			Value index = stack->pop();
-			Value list = stack->pop();
-			if(list.type() != ValueType::LIST)
-				throw ExecutionError("Cannot index " + valueTypeDesc(list.type()));
-			if(index.type() != ValueType::INT)
-				throw ExecutionError("Cannot index list with " + valueTypeDesc(index.type()));
-			List& list2 = static_cast<List&>(*list.getPointer());
+			Value listValue = stack->pop();
+			List* list = listValue.get<List>();
+			if(!list)
+				throw ExecutionError("Cannot index " + listValue.getTypeDesc());
+			if(!index.isInt())
+				throw ExecutionError("Cannot index list with " + index.getTypeDesc());
 			int32_t index2 = index.getInt();
-			if(index2 < 1 || index2 > list2.vec.size())
+			if(index2 < 1 || index2 > list->vec.size())
 				throw ExecutionError("List index out of range: " + std::to_string(index2));
-			stack->push(list2.vec[index2-1]);
+			stack->push(list->vec[index2-1]);
 			break;
 		} default:
 			throw ExecutionError("Opcode " + opcodeDesc(op) + " not yet implemented");
@@ -239,7 +240,7 @@ void VM::run(Chunk& chunk) {
 		
 		if(!returnNow && it == chunk.functions[funcIdx]->code.end()) { // implicit "return nil"
 			popLocals(calls.back()->localCnt);
-			stack->push(Value());
+			stack->push(Value::nil());
 			returnNow = true;
 		}
 		

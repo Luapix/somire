@@ -168,7 +168,7 @@ void Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& ct
 	case NodeType::SYM: {
 		NodeSymbol& expr2 = static_cast<NodeSymbol&>(expr);
 		if(expr2.val == "nil") {
-			compileConstant(curFunc, Value());
+			compileConstant(curFunc, Value::nil());
 		} else if(expr2.val == "true") {
 			compileConstant(curFunc, Value(true));
 		} else if(expr2.val == "false") {
