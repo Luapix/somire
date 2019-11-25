@@ -154,29 +154,31 @@ std::unordered_map<std::string, Opcode> binaryOps = {
 	{"index", Opcode::INDEX}
 };
 
-void Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& ctx) {
+Type& Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& ctx) {
 	switch(expr.type) {
 	case NodeType::INT:
 		compileConstant(curFunc, Value(static_cast<NodeInt&>(expr).val));
-		break;
+		return intType;
 	case NodeType::REAL:
 		compileConstant(curFunc, Value(static_cast<NodeReal&>(expr).val));
-		break;
+		return realType;
 	case NodeType::STR:
 		compileConstant(curFunc, Value(new String(static_cast<NodeString&>(expr).val)));
-		break;
+		return stringType;
 	case NodeType::SYM: {
 		NodeSymbol& expr2 = static_cast<NodeSymbol&>(expr);
 		if(expr2.val == "nil") {
 			compileConstant(curFunc, Value::nil());
+			return nilType;
 		} else if(expr2.val == "true") {
 			compileConstant(curFunc, Value(true));
+			return boolType;
 		} else if(expr2.val == "false") {
 			compileConstant(curFunc, Value(false));
+			return boolType;
 		} else {
 			throw CompileError("Unexpected keyword in expression: " + expr2.val);
 		}
-		break;
 	} case NodeType::ID: {
 		NodeId& expr2 = static_cast<NodeId&>(expr);
 		int16_t idx;
@@ -188,22 +190,23 @@ void Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& ct
 			writeUI16(curFunc.codeOut, curChunk->constants->vec.size());
 			curChunk->constants->vec.emplace_back(new String(expr2.val));
 		}
-		break;
+		return nilType; // TODO
 	} case NodeType::UNI_OP: {
 		NodeUnary& expr2 = static_cast<NodeUnary&>(expr);
-		compileExpression(curFunc, *expr2.val, ctx);
+		Type& valType = compileExpression(curFunc, *expr2.val, ctx);
 		if(expr2.op == "-") {
 			writeUI8(curFunc.codeOut, (uint8_t) Opcode::UNI_MINUS);
+			return valType;
 		} else if(expr2.op == "not") {
 			writeUI8(curFunc.codeOut, (uint8_t) Opcode::NOT);
+			return boolType;
 		} else {
 			throw CompileError("Unknown unary operator: " + expr2.op);
 		}
-		break;
 	} case NodeType::BIN_OP: {
 		NodeBinary& expr2 = static_cast<NodeBinary&>(expr);
-		compileExpression(curFunc, *expr2.left, ctx);
-		compileExpression(curFunc, *expr2.right, ctx);
+		Type& type1 = compileExpression(curFunc, *expr2.left, ctx);
+		Type& type2 = compileExpression(curFunc, *expr2.right, ctx);
 		auto it = binaryOps.find(expr2.op);
 		if(it != binaryOps.end()) {
 			writeUI8(curFunc.codeOut, (uint8_t) it->second);
@@ -219,7 +222,7 @@ void Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& ct
 		} else {
 			throw CompileError("Unknown binary operator: " + expr2.op);
 		}
-		break;
+		return nilType; // TODO
 	} case NodeType::CALL: {
 		NodeCall& expr2 = static_cast<NodeCall&>(expr);
 		for(auto& arg : expr2.args) {
@@ -228,7 +231,7 @@ void Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& ct
 		compileExpression(curFunc, *expr2.func, ctx);
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::CALL);
 		writeUI16(curFunc.codeOut, (uint16_t) expr2.args.size());
-		break;
+		return nilType; // TODO;
 	} case NodeType::FUNC: {
 		NodeFunction& expr2 = static_cast<NodeFunction&>(expr);
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::MAKE_FUNC);
@@ -245,7 +248,7 @@ void Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& ct
 		for(int16_t upvalue : upvalues) {
 			writeI16(curFunc.codeOut, upvalue);
 		}
-		break;
+		return functionType;
 	} case NodeType::LIST: {
 		NodeList& expr2 = static_cast<NodeList&>(expr);
 		for(const std::unique_ptr<Node>& val : expr2.val) {
@@ -255,7 +258,7 @@ void Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& ct
 		if(expr2.val.size() > 0xffff)
 			throw CompileError("Too many elements in list literal");
 		writeUI16(curFunc.codeOut, (uint16_t) expr2.val.size());
-		break;
+		return listType;
 	} default:
 		throw CompileError("Expression type not implemented: " + nodeTypeDesc(expr.type));
 	}
