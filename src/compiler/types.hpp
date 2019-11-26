@@ -4,17 +4,25 @@
 
 class Type {
 public:
+	Type(std::string desc);
+	
 	virtual bool canBeAssignedTo(Type& other);
+	virtual std::string getDesc();
+	
+private:
+	std::string desc;
 };
 
 class UnknownType : public Type {
 public:
+	UnknownType();
+	
 	bool canBeAssignedTo(Type& other) override;
 };
 
 class Subtype : public Type {
 public:
-	Subtype(Type& parent);
+	Subtype(std::string desc, Type& parent);
 	
 	bool canBeAssignedTo(Type& other) override;
 	

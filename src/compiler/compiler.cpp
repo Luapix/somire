@@ -1,5 +1,7 @@
 #include "compiler.hpp"
 
+#include <unordered_set>
+
 Context::Context(bool isFuncTop, Context* parent)
 	: isFuncTop(isFuncTop), parent(parent), nextLocal(0), nextUpvalue(-1), innerLocalCount(0) {
 	if(!isFuncTop) {
@@ -94,7 +96,9 @@ void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx
 		std::optional<Variable> var = ctx.getVariable(stat2.id);
 		if(!var)
 			throw CompileError("Trying to set global or undefined variable " + stat2.id); // for now, no modifying globals
-		compileExpression(curFunc, *stat2.exp, ctx);
+		Type* valType = compileExpression(curFunc, *stat2.exp, ctx);
+		if(valType != var->type)
+			throw CompileError("Trying to set variable of type " + var->type->getDesc() + " to value of type " + valType->getDesc());
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::SET_LOCAL);
 		writeI16(curFunc.codeOut, var->idx);
 		break;
@@ -104,7 +108,9 @@ void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx
 		break;
 	case NodeType::IF: {
 		NodeIf& stat2 = static_cast<NodeIf&>(stat);
-		compileExpression(curFunc, *stat2.cond, ctx);
+		Type* condType = compileExpression(curFunc, *stat2.cond, ctx);
+		if(condType != &boolType)
+			throw CompileError("Expecting boolean in condition, got value of type " + condType->getDesc());
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::JUMP_IF_NOT);
 		uint32_t addPos = curFunc.code.size();
 		writeI16(curFunc.codeOut, 0);
@@ -126,7 +132,9 @@ void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx
 	} case NodeType::WHILE: {
 		NodeWhile& stat2 = static_cast<NodeWhile&>(stat);
 		uint32_t before = curFunc.code.size();
-		compileExpression(curFunc, *stat2.cond, ctx);
+		Type* condType = compileExpression(curFunc, *stat2.cond, ctx);
+		if(condType != &boolType)
+			throw CompileError("Expecting boolean in while loop, got value of type " + condType->getDesc());
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::JUMP_IF_NOT);
 		uint32_t addPos = curFunc.code.size();
 		writeI16(curFunc.codeOut, 0);
@@ -144,6 +152,9 @@ void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx
 		throw CompileError("Statement type not implemented: " + nodeTypeDesc(stat.type));
 	}
 }
+
+std::unordered_set<std::string> numericOps = {"+", "-", "*", "%"}; // int ⋅ int → int ; real ⋅ real → real
+std::unordered_set<std::string> comparisonOps = {"<", ">", "<=", ">="};
 
 std::unordered_map<std::string, Opcode> binaryOps = {
 	{"+", Opcode::BIN_PLUS}, {"-", Opcode::BIN_MINUS}, {"*", Opcode::MULTIPLY}, {"/", Opcode::DIVIDE}, {"%", Opcode::MODULO},
@@ -221,6 +232,42 @@ Type* Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& c
 			writeUI8(curFunc.codeOut, (uint8_t) Opcode::NOT);
 		} else {
 			throw CompileError("Unknown binary operator: " + expr2.op);
+		}
+		bool i1 = type1 == &intType,  i2 = type2 == &intType,
+		     r1 = type1 == &realType, r2 = type2 == &realType,
+		     n1 = i1 || r1,           n2 = i2 || r2;
+		if(numericOps.find(expr2.op) != numericOps.end()) {
+			if(i1 & i2) {
+				return &intType;
+			} else if(n1 && n2) {
+				return &realType;
+			} else {
+				throw CompileError("Trying to perform arithmetic on " + type1->getDesc() + " and " + type2->getDesc());
+			}
+		} else if(comparisonOps.find(expr2.op) != comparisonOps.end()) {
+			if(n1 && n2) {
+				return &boolType;
+			} else {
+				throw CompileError("Trying to compare " + type1->getDesc() + " and " + type2->getDesc());
+			}
+		} else if(expr2.op == "/" || expr2.op == "^") {
+			if(n1 && n2) {
+				return &realType;
+			} else {
+				throw CompileError("Trying to perform real operations on " + type1->getDesc() + " and " + type2->getDesc());
+			}
+		} else if(expr2.op == "and" || expr2. op == "or") {
+			if(type1 == &boolType && type2 == &boolType) {
+				return &boolType;
+			} else {
+				throw CompileError("Trying to perform boolean operations on " + type1->getDesc() + " and " + type2->getDesc());
+			}
+		} else if(expr2.op == "index") {
+			if(type1 == &listType && type2 == &intType) {
+				return &nilType; // TODO
+			} else {
+				throw CompileError("Trying to index " + type1->getDesc() + " with " + type2->getDesc());
+			}
 		}
 		return &nilType; // TODO
 	} case NodeType::CALL: {
