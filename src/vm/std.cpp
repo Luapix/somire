@@ -88,3 +88,14 @@ void loadStd(Namespace& ns) {
 	ns.map["listAdd"] = Value(new CFunction(listAdd));
 	ns.map["listSize"] = Value(new CFunction(listSize));
 }
+
+void defineStdTypes(TypeNamespace& ns, TypeNamespace types) {
+	Type* functionType = types.map["function"];
+	ns.map["log"] = functionType;
+	ns.map["repr"] = functionType;
+	ns.map["write"] = functionType;
+	ns.map["writeLine"] = functionType;
+	ns.map["listNew"] = functionType;
+	ns.map["listAdd"] = functionType;
+	ns.map["listSize"] = functionType;
+}

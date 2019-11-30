@@ -50,7 +50,18 @@ std::vector<int16_t>& Context::getFunctionUpvalues() {
 }
 
 
-Compiler::Compiler() {}
+Compiler::Compiler() : types(new TypeNamespace()), globals(new TypeNamespace()) {
+	defineBasicTypes(*types);
+	anyType = types->map["any"];
+	nilType = types->map["nil"];
+	boolType = types->map["bool"];
+	realType = types->map["real"];
+	intType = types->map["int"];
+	listType = types->map["list"];
+	stringType = types->map["string"];
+	functionType = types->map["function"];
+	defineStdTypes(*globals, *types);
+}
 
 std::unique_ptr<Chunk> Compiler::compileProgram(std::unique_ptr<Node> ast) {
 	curChunk = std::unique_ptr<Chunk>(new Chunk());
@@ -64,7 +75,7 @@ std::vector<int16_t> Compiler::compileFunction(NodeBlock& block, std::vector<std
 	curChunk->functions.emplace_back(new FunctionChunk());
 	Context ctx(true, parent);
 	for(std::string arg : argNames) {
-		ctx.defineLocal(arg, &anyType); // TODO
+		ctx.defineLocal(arg, anyType); // TODO
 	}
 	compileBlock(*curChunk->functions.back(), block, ctx, false); // no need to pop locals at the end of a function
 	return ctx.getFunctionUpvalues();
@@ -85,20 +96,20 @@ void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx
 	case NodeType::LET: {
 		NodeLet& stat2 = static_cast<NodeLet&>(stat);
 		if(stat2.exp->type == NodeType::FUNC)
-			ctx.defineLocal(stat2.id, &functionType); // Define in advance to allow for recursion
-		Type& valType = compileExpression(curFunc, *stat2.exp, ctx);
+			ctx.defineLocal(stat2.id, functionType); // Define in advance to allow for recursion
+		Type* valType = compileExpression(curFunc, *stat2.exp, ctx);
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::LET);
 		if(stat2.exp->type != NodeType::FUNC)
-			ctx.defineLocal(stat2.id, &valType);
+			ctx.defineLocal(stat2.id, valType);
 		break;
 	} case NodeType::SET: {
 		NodeSet& stat2 = static_cast<NodeSet&>(stat);
 		std::optional<Variable> var = ctx.getVariable(stat2.id);
 		if(!var)
 			throw CompileError("Trying to set global or undefined variable " + stat2.id); // for now, no modifying globals
-		Type& valType = compileExpression(curFunc, *stat2.exp, ctx);
-		if(!valType.canBeAssignedTo(*var->type))
-			throw CompileError("Trying to set variable of type " + var->type->getDesc() + " to value of type " + valType.getDesc());
+		Type* valType = compileExpression(curFunc, *stat2.exp, ctx);
+		if(!valType->canBeAssignedTo(var->type))
+			throw CompileError("Trying to set variable of type " + var->type->getDesc() + " to value of type " + valType->getDesc());
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::SET_LOCAL);
 		writeI16(curFunc.codeOut, var->idx);
 		break;
@@ -108,9 +119,9 @@ void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx
 		break;
 	case NodeType::IF: {
 		NodeIf& stat2 = static_cast<NodeIf&>(stat);
-		Type& condType = compileExpression(curFunc, *stat2.cond, ctx);
-		if(!condType.canBeAssignedTo(boolType))
-			throw CompileError("Expecting boolean in condition, got value of type " + condType.getDesc());
+		Type* condType = compileExpression(curFunc, *stat2.cond, ctx);
+		if(!condType->canBeAssignedTo(boolType))
+			throw CompileError("Expecting boolean in condition, got value of type " + condType->getDesc());
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::JUMP_IF_NOT);
 		uint32_t addPos = curFunc.code.size();
 		writeI16(curFunc.codeOut, 0);
@@ -132,9 +143,9 @@ void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx
 	} case NodeType::WHILE: {
 		NodeWhile& stat2 = static_cast<NodeWhile&>(stat);
 		uint32_t before = curFunc.code.size();
-		Type& condType = compileExpression(curFunc, *stat2.cond, ctx);
-		if(!condType.canBeAssignedTo(boolType))
-			throw CompileError("Expecting boolean in while loop, got value of type " + condType.getDesc());
+		Type* condType = compileExpression(curFunc, *stat2.cond, ctx);
+		if(!condType->canBeAssignedTo(boolType))
+			throw CompileError("Expecting boolean in while loop, got value of type " + condType->getDesc());
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::JUMP_IF_NOT);
 		uint32_t addPos = curFunc.code.size();
 		writeI16(curFunc.codeOut, 0);
@@ -164,7 +175,7 @@ std::unordered_map<std::string, Opcode> binaryOps = {
 	{"index", Opcode::INDEX}
 };
 
-Type& Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& ctx) {
+Type* Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& ctx) {
 	switch(expr.type) {
 	case NodeType::INT:
 		compileConstant(curFunc, Value(static_cast<NodeInt&>(expr).val));
@@ -195,16 +206,21 @@ Type& Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& c
 		if(var) {
 			writeUI8(curFunc.codeOut, (uint8_t) Opcode::LOCAL);
 			writeI16(curFunc.codeOut, var->idx);
-			return *var->type;
+			return var->type;
 		} else {
-			writeUI8(curFunc.codeOut, (uint8_t) Opcode::GLOBAL);
-			writeUI16(curFunc.codeOut, curChunk->constants->vec.size());
-			curChunk->constants->vec.emplace_back(new String(expr2.val));
-			return anyType; // TODO
+			auto it = globals->map.find(expr2.val);
+			if(it != globals->map.end()) {
+				writeUI8(curFunc.codeOut, (uint8_t) Opcode::GLOBAL);
+				writeUI16(curFunc.codeOut, curChunk->constants->vec.size());
+				curChunk->constants->vec.emplace_back(new String(expr2.val));
+				return it->second;
+			} else {
+				throw CompileError("Trying to access unknown variable: " + expr2.val);
+			}
 		}
 	} case NodeType::UNI_OP: {
 		NodeUnary& expr2 = static_cast<NodeUnary&>(expr);
-		Type& valType = compileExpression(curFunc, *expr2.val, ctx);
+		Type* valType = compileExpression(curFunc, *expr2.val, ctx);
 		if(expr2.op == "-") {
 			writeUI8(curFunc.codeOut, (uint8_t) Opcode::UNI_MINUS);
 			return valType;
@@ -216,8 +232,8 @@ Type& Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& c
 		}
 	} case NodeType::BIN_OP: {
 		NodeBinary& expr2 = static_cast<NodeBinary&>(expr);
-		Type& type1 = compileExpression(curFunc, *expr2.left, ctx);
-		Type& type2 = compileExpression(curFunc, *expr2.right, ctx);
+		Type* type1 = compileExpression(curFunc, *expr2.left, ctx);
+		Type* type2 = compileExpression(curFunc, *expr2.right, ctx);
 		auto it = binaryOps.find(expr2.op);
 		if(it != binaryOps.end()) {
 			writeUI8(curFunc.codeOut, (uint8_t) it->second);
@@ -233,39 +249,39 @@ Type& Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& c
 		} else {
 			throw CompileError("Unknown binary operator: " + expr2.op);
 		}
-		bool i1 = type1.canBeAssignedTo(intType),  i2 = type2.canBeAssignedTo(intType),
-		     r1 = type1.canBeAssignedTo(realType), r2 = type2.canBeAssignedTo(realType);
+		bool i1 = type1->canBeAssignedTo(intType),  i2 = type2->canBeAssignedTo(intType),
+		     r1 = type1->canBeAssignedTo(realType), r2 = type2->canBeAssignedTo(realType);
 		if(numericOps.find(expr2.op) != numericOps.end()) {
 			if(i1 && i2) {
 				return intType;
 			} else if(r1 && r2) {
 				return realType;
 			} else {
-				throw CompileError("Trying to perform arithmetic on " + type1.getDesc() + " and " + type2.getDesc());
+				throw CompileError("Trying to perform arithmetic on " + type1->getDesc() + " and " + type2->getDesc());
 			}
 		} else if(comparisonOps.find(expr2.op) != comparisonOps.end()) {
 			if(r1 && r2) {
 				return boolType;
 			} else {
-				throw CompileError("Trying to compare " + type1.getDesc() + " and " + type2.getDesc());
+				throw CompileError("Trying to compare " + type1->getDesc() + " and " + type2->getDesc());
 			}
 		} else if(expr2.op == "/" || expr2.op == "^") {
 			if(r1 && r2) {
 				return realType;
 			} else {
-				throw CompileError("Trying to perform real operations on " + type1.getDesc() + " and " + type2.getDesc());
+				throw CompileError("Trying to perform real operations on " + type1->getDesc() + " and " + type2->getDesc());
 			}
 		} else if(expr2.op == "and" || expr2. op == "or") {
-			if(type1.canBeAssignedTo(boolType) && type2.canBeAssignedTo(boolType)) {
+			if(type1->canBeAssignedTo(boolType) && type2->canBeAssignedTo(boolType)) {
 				return boolType;
 			} else {
-				throw CompileError("Trying to perform boolean operations on " + type1.getDesc() + " and " + type2.getDesc());
+				throw CompileError("Trying to perform boolean operations on " + type1->getDesc() + " and " + type2->getDesc());
 			}
 		} else if(expr2.op == "index") {
-			if(type1.canBeAssignedTo(listType) && type2.canBeAssignedTo(intType)) {
+			if(type1->canBeAssignedTo(listType) && type2->canBeAssignedTo(intType)) {
 				return anyType; // TODO
 			} else {
-				throw CompileError("Trying to index " + type1.getDesc() + " with " + type2.getDesc());
+				throw CompileError("Trying to index " + type1->getDesc() + " with " + type2->getDesc());
 			}
 		}
 		throw CompileError("Type deduction not implemented for operator " + expr2.op);

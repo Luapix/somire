@@ -8,6 +8,7 @@
 #include "parser/ast.hpp"
 #include "chunk.hpp"
 #include "types.hpp"
+#include "vm/std.hpp"
 
 
 struct Variable {
@@ -45,9 +46,14 @@ public:
 private:
 	std::unique_ptr<Chunk> curChunk;
 	
+	GC::Root<TypeNamespace> types;
+	Type *anyType, *nilType, *boolType, *realType, *intType, *listType, *stringType, *functionType;
+	
+	GC::Root<TypeNamespace> globals;
+	
 	std::vector<int16_t> compileFunction(NodeBlock& block, std::vector<std::string> argNames, Context* parent = nullptr);
 	void compileBlock(FunctionChunk& curFunc, NodeBlock& block, Context& ctx, bool popLocals = true);
 	void compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx);
-	Type& compileExpression(FunctionChunk& curFunc, Node& expr, Context& ctx);
+	Type* compileExpression(FunctionChunk& curFunc, Node& expr, Context& ctx);
 	void compileConstant(FunctionChunk& curFunc, Value val);
 };
