@@ -90,12 +90,11 @@ void loadStd(Namespace& ns) {
 }
 
 void defineStdTypes(TypeNamespace& ns, TypeNamespace types) {
-	Type* functionType = types.map["function"];
-	ns.map["log"] = functionType;
-	ns.map["repr"] = functionType;
-	ns.map["write"] = functionType;
-	ns.map["writeLine"] = functionType;
-	ns.map["listNew"] = functionType;
-	ns.map["listAdd"] = functionType;
-	ns.map["listSize"] = functionType;
+	ns.map["log"] = types.map["macro"];
+	ns.map["repr"] = new FunctionType({types.map["any"]}, types.map["string"]);
+	ns.map["write"] = new FunctionType({types.map["string"]}, types.map["nil"]);
+	ns.map["writeLine"] = new FunctionType({types.map["string"]}, types.map["nil"]);
+	ns.map["listNew"] = new FunctionType({}, types.map["list"]);
+	ns.map["listAdd"] = types.map["macro"];
+	ns.map["listSize"] = new FunctionType({types.map["list"]}, types.map["int"]);
 }

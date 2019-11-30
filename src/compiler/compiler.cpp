@@ -59,7 +59,7 @@ Compiler::Compiler() : types(new TypeNamespace()), globals(new TypeNamespace()) 
 	intType = types->map["int"];
 	listType = types->map["list"];
 	stringType = types->map["string"];
-	functionType = types->map["function"];
+	macroType = types->map["macro"];
 	defineStdTypes(*globals, *types);
 }
 
@@ -95,8 +95,8 @@ void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx
 	switch(stat.type) {
 	case NodeType::LET: {
 		NodeLet& stat2 = static_cast<NodeLet&>(stat);
-		if(stat2.exp->type == NodeType::FUNC)
-			ctx.defineLocal(stat2.id, functionType); // Define in advance to allow for recursion
+		if(stat2.exp->type == NodeType::FUNC) // Define in advance to allow for recursion
+			ctx.defineLocal(stat2.id, macroType); // TODO
 		Type* valType = compileExpression(curFunc, *stat2.exp, ctx);
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::LET);
 		if(stat2.exp->type != NodeType::FUNC)
@@ -287,13 +287,30 @@ Type* Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& c
 		throw CompileError("Type deduction not implemented for operator " + expr2.op);
 	} case NodeType::CALL: {
 		NodeCall& expr2 = static_cast<NodeCall&>(expr);
+		std::vector<Type*> argTypes;
 		for(auto& arg : expr2.args) {
-			compileExpression(curFunc, *arg, ctx);
+			argTypes.push_back(compileExpression(curFunc, *arg, ctx));
 		}
-		compileExpression(curFunc, *expr2.func, ctx);
+		Type* funcType = compileExpression(curFunc, *expr2.func, ctx);
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::CALL);
 		writeUI16(curFunc.codeOut, (uint16_t) expr2.args.size());
-		return anyType; // TODO;
+		
+		FunctionType* funcType2;
+		if(funcType->canBeAssignedTo(macroType)) {
+			return anyType;
+		} else if(funcType2 = dynamic_cast<FunctionType*>(funcType)) {
+			uint32_t expected = funcType2->argTypes.size();
+			uint32_t got = argTypes.size();
+			if(got != expected)
+				throw CompileError("Expected " + std::to_string(expected) + " arguments in function call, got " + std::to_string(got));
+			for(uint32_t i = 0; i < got; i++) {
+				if(!argTypes[i]->canBeAssignedTo(funcType2->argTypes[i]))
+					throw CompileError("Cannot assign " + argTypes[i]->getDesc() + " to " + funcType2->argTypes[i]->getDesc() + " argument");
+			}
+			return funcType2->resType;
+		} else {
+			throw CompileError("Trying to call " + funcType->getDesc());
+		}
 	} case NodeType::FUNC: {
 		NodeFunction& expr2 = static_cast<NodeFunction&>(expr);
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::MAKE_FUNC);
@@ -310,7 +327,7 @@ Type* Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& c
 		for(int16_t upvalue : upvalues) {
 			writeI16(curFunc.codeOut, upvalue);
 		}
-		return functionType;
+		return macroType; // TODO
 	} case NodeType::LIST: {
 		NodeList& expr2 = static_cast<NodeList&>(expr);
 		for(const std::unique_ptr<Node>& val : expr2.val) {

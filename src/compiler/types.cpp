@@ -1,15 +1,12 @@
 #include "types.hpp"
 
-Type::Type(std::string name) : name(name) {}
+Type::Type(std::string name, bool isAny) : name(name), _isAny(isAny) {}
+
+bool Type::canBeAssignedTo(Type* other) {
+	return this == other || other->isAny();
+}
 
 std::string Type::getDesc() { return name; }
-
-
-AnyType::AnyType() : Type("any") {}
-
-bool AnyType::canBeAssignedTo(Type* other) {
-	return this == other;
-}
 
 
 UnknownType::UnknownType() : Type("unknown") {}
@@ -22,7 +19,32 @@ bool UnknownType::canBeAssignedTo(Type* other) {
 Subtype::Subtype(std::string name, Type* parent) : Type(name), parent(parent) {}
 
 bool Subtype::canBeAssignedTo(Type* other) {
-	return this == other || parent->canBeAssignedTo(other);
+	return this == other || other->isAny() || parent->canBeAssignedTo(other);
+}
+
+
+FunctionType::FunctionType(std::vector<Type*> argTypes, Type* resType)
+	: Type("function"), argTypes(argTypes), resType(resType) {}
+
+bool FunctionType::canBeAssignedTo(Type* other) {
+	if(other->isAny()) return true;
+	FunctionType* other2 = dynamic_cast<FunctionType*>(other);
+	if(!other2) return false;
+	if(argTypes.size() != other2->argTypes.size()) return false;
+	for(uint32_t i = 0; i < argTypes.size(); i++) {
+		if(!other2->argTypes[i]->canBeAssignedTo(argTypes[i])) return false;
+	}
+	return resType->canBeAssignedTo(other2->resType);
+}
+
+std::string FunctionType::getDesc() {
+	std::string res = "function(";
+	for(uint32_t i = 0; i < argTypes.size(); i++) {
+		res += argTypes[i]->getDesc();
+		if(i != argTypes.size() - 1)
+			res += ", ";
+	}
+	return res + ") -> " + resType->getDesc();
 }
 
 
@@ -34,17 +56,17 @@ void TypeNamespace::markChildren() {
 
 
 void defineBasicTypes(TypeNamespace& ns) {
-	Type* anyType = new AnyType();
-	ns.map["any"] = anyType;
+	ns.map["any"] = new Type("any", true);
 	
-	ns.map["nil"] = new Subtype("nil", anyType);
-	ns.map["bool"] = new Subtype("bool", anyType);
-	ns.map["real"] = new Subtype("real", anyType);
+	ns.map["nil"] = new Type("nil");
+	ns.map["bool"] = new Type("bool");
+	ns.map["real"] = new Type("real");
 	ns.map["int"] = new Subtype("int", ns.map["real"]);
 	
 	ns.map["unknown"] = new UnknownType();
-	ns.map["list"] = new Subtype("list", anyType);
-	ns.map["string"] = new Subtype("string", anyType);
-	ns.map["function"] = new Subtype("function", anyType);
-	ns.map["type"] = new Subtype("type", anyType);
+	ns.map["list"] = new Type("list");
+	ns.map["string"] = new Type("string");
+	// For functions too complex to be described by a FunctionType
+	ns.map["macro"] = new Type("macro");
+	ns.map["type"] = new Type("type");
 }
