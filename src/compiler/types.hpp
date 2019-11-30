@@ -6,11 +6,18 @@ class Type {
 public:
 	Type(std::string desc);
 	
-	virtual bool canBeAssignedTo(Type& other);
+	virtual bool canBeAssignedTo(Type& other) = 0;
 	virtual std::string getDesc();
 	
 private:
 	std::string desc;
+};
+
+class AnyType : public Type {
+public:
+	AnyType();
+	
+	bool canBeAssignedTo(Type& other) override;
 };
 
 class UnknownType : public Type {
@@ -30,12 +37,13 @@ private:
 	Type& parent;
 };
 
-extern Type nilType;
-extern Type boolType;
-extern Type realType;
+extern AnyType anyType;
+extern Subtype nilType;
+extern Subtype boolType;
+extern Subtype realType;
 extern Subtype intType;
 
 extern UnknownType unknownObjectType;
-extern Type listType;
-extern Type stringType;
-extern Type functionType;
+extern Subtype listType;
+extern Subtype stringType;
+extern Subtype functionType;

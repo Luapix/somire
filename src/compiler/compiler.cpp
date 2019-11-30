@@ -64,7 +64,7 @@ std::vector<int16_t> Compiler::compileFunction(NodeBlock& block, std::vector<std
 	curChunk->functions.emplace_back(new FunctionChunk());
 	Context ctx(true, parent);
 	for(std::string arg : argNames) {
-		ctx.defineLocal(arg, &nilType); // TODO
+		ctx.defineLocal(arg, &anyType); // TODO
 	}
 	compileBlock(*curChunk->functions.back(), block, ctx, false); // no need to pop locals at the end of a function
 	return ctx.getFunctionUpvalues();
@@ -200,7 +200,7 @@ Type* Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& c
 			writeUI8(curFunc.codeOut, (uint8_t) Opcode::GLOBAL);
 			writeUI16(curFunc.codeOut, curChunk->constants->vec.size());
 			curChunk->constants->vec.emplace_back(new String(expr2.val));
-			return &nilType; // TODO
+			return &anyType; // TODO
 		}
 	} case NodeType::UNI_OP: {
 		NodeUnary& expr2 = static_cast<NodeUnary&>(expr);
@@ -264,12 +264,12 @@ Type* Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& c
 			}
 		} else if(expr2.op == "index") {
 			if(type1 == &listType && type2 == &intType) {
-				return &nilType; // TODO
+				return &anyType; // TODO
 			} else {
 				throw CompileError("Trying to index " + type1->getDesc() + " with " + type2->getDesc());
 			}
 		}
-		return &nilType; // TODO
+		throw CompileError("Type deduction not implemented for operator " + expr2.op);
 	} case NodeType::CALL: {
 		NodeCall& expr2 = static_cast<NodeCall&>(expr);
 		for(auto& arg : expr2.args) {
@@ -278,7 +278,7 @@ Type* Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& c
 		compileExpression(curFunc, *expr2.func, ctx);
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::CALL);
 		writeUI16(curFunc.codeOut, (uint16_t) expr2.args.size());
-		return &nilType; // TODO;
+		return &anyType; // TODO;
 	} case NodeType::FUNC: {
 		NodeFunction& expr2 = static_cast<NodeFunction&>(expr);
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::MAKE_FUNC);
