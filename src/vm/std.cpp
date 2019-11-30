@@ -32,26 +32,22 @@ Value log(std::vector<Value>& args) {
 }
 
 Value repr(std::vector<Value>& args) {
-	checkNumber(args, 1);
 	return Value(new String(args[0].toString()));
 }
 
 Value write(std::vector<Value>& args) {
-	checkNumber(args, 1);
-	String& s = expectObject<String>(args[0], 0, "string");
+	String& s = *args[0].get<String>();
 	std::cout << s.str;
 	return Value::nil();
 }
 
 Value writeLine(std::vector<Value>& args) {
-	checkNumber(args, 1);
-	String& s = expectObject<String>(args[0], 0, "string");
+	String& s = *args[0].get<String>();
 	std::cout << s.str << std::endl;
 	return Value::nil();
 }
 
 Value listNew(std::vector<Value>& args) {
-	checkNumber(args, 0);
 	return Value(new List());
 }
 
@@ -74,8 +70,7 @@ Value listAdd(std::vector<Value>& args) {
 }
 
 Value listSize(std::vector<Value>& args) {
-	checkNumber(args, 1);
-	List& list = expectObject<List>(args[0], 0, "list");
+	List& list = *args[0].get<List>();
 	return Value((int32_t) list.vec.size());
 }
 
