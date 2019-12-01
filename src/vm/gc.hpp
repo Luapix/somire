@@ -22,7 +22,7 @@ namespace GC {
 	class GCObject {
 	public:
 		GCObject();
-		GCObject(GCObject const&);
+		GCObject(GCObject const&) = delete;
 		virtual ~GCObject();
 		
 		void mark();

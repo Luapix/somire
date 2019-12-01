@@ -47,7 +47,7 @@ private:
 	std::unique_ptr<Chunk> curChunk;
 	
 	GC::Root<TypeNamespace> types;
-	Type *anyType, *nilType, *boolType, *realType, *intType, *listType, *stringType, *macroType;
+	Type *anyType, *nilType, *boolType, *realType, *intType, *stringType, *macroType;
 	
 	GC::Root<TypeNamespace> globals;
 	

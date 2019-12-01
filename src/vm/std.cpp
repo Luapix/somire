@@ -84,12 +84,12 @@ void loadStd(Namespace& ns) {
 	ns.map["listSize"] = Value(new CFunction(listSize));
 }
 
-void defineStdTypes(TypeNamespace& ns, TypeNamespace types) {
+void defineStdTypes(TypeNamespace& ns, TypeNamespace& types) {
 	ns.map["log"] = types.map["macro"];
 	ns.map["repr"] = new FunctionType({types.map["any"]}, types.map["string"]);
 	ns.map["write"] = new FunctionType({types.map["string"]}, types.map["nil"]);
 	ns.map["writeLine"] = new FunctionType({types.map["string"]}, types.map["nil"]);
-	ns.map["listNew"] = new FunctionType({}, types.map["list"]);
+	ns.map["listNew"] = new FunctionType({}, new ListType(nullptr));
 	ns.map["listAdd"] = types.map["macro"];
-	ns.map["listSize"] = new FunctionType({types.map["list"]}, types.map["int"]);
+	ns.map["listSize"] = new FunctionType({new ListType(types.map["any"])}, types.map["int"]);
 }

@@ -22,6 +22,10 @@ bool Subtype::canBeAssignedTo(Type* other) {
 	return this == other || other->isAny() || parent->canBeAssignedTo(other);
 }
 
+void Subtype::markChildren() {
+	parent->mark();
+}
+
 
 FunctionType::FunctionType(std::vector<Type*> argTypes, Type* resType)
 	: Type("function"), argTypes(argTypes), resType(resType) {}
@@ -47,6 +51,36 @@ std::string FunctionType::getDesc() {
 	return res + ") -> " + resType->getDesc();
 }
 
+void FunctionType::markChildren() {
+	for(Type* argType : argTypes) {
+		argType->mark();
+	}
+	resType->mark();
+}
+
+
+ListType::ListType(Type* elemType) : Type("list"), elemType(elemType) {}
+
+bool ListType::canBeAssignedTo(Type* other) {
+	if(other->isAny()) return true;
+	ListType* other2 = dynamic_cast<ListType*>(other);
+	if(!other2) return false;
+	if(!elemType) return true; // empty list can be assigned to any typed list
+	return other2->elemType && elemType->canBeAssignedTo(other2->elemType);
+}
+
+std::string ListType::getDesc() {
+	if(elemType)
+		return "list<" + elemType->getDesc() + ">";
+	else
+		return "empty list";
+}
+
+void ListType::markChildren() {
+	if(elemType)
+		elemType->mark();
+}
+
 
 void TypeNamespace::markChildren() {
 	for(auto& pair : map) {
@@ -64,7 +98,6 @@ void defineBasicTypes(TypeNamespace& ns) {
 	ns.map["int"] = new Subtype("int", ns.map["real"]);
 	
 	ns.map["unknown"] = new UnknownType();
-	ns.map["list"] = new Type("list");
 	ns.map["string"] = new Type("string");
 	// For functions too complex to be described by a FunctionType
 	ns.map["macro"] = new Type("macro");

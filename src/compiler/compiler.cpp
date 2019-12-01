@@ -57,7 +57,6 @@ Compiler::Compiler() : types(new TypeNamespace()), globals(new TypeNamespace()) 
 	boolType = types->map["bool"];
 	realType = types->map["real"];
 	intType = types->map["int"];
-	listType = types->map["list"];
 	stringType = types->map["string"];
 	macroType = types->map["macro"];
 	defineStdTypes(*globals, *types);
@@ -265,6 +264,8 @@ Type* Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& c
 			} else {
 				throw CompileError("Trying to compare " + type1->getDesc() + " and " + type2->getDesc());
 			}
+		} else if(expr2.op == "==" || expr2.op == "!=") {
+			return boolType;
 		} else if(expr2.op == "/" || expr2.op == "^") {
 			if(r1 && r2) {
 				return realType;
@@ -278,8 +279,9 @@ Type* Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& c
 				throw CompileError("Trying to perform boolean operations on " + type1->getDesc() + " and " + type2->getDesc());
 			}
 		} else if(expr2.op == "index") {
-			if(type1->canBeAssignedTo(listType) && type2->canBeAssignedTo(intType)) {
-				return anyType; // TODO
+			ListType* listType = dynamic_cast<ListType*>(type1);
+			if(listType && listType->elemType && type2->canBeAssignedTo(intType)) {
+				return listType->elemType;
 			} else {
 				throw CompileError("Trying to index " + type1->getDesc() + " with " + type2->getDesc());
 			}
@@ -330,14 +332,24 @@ Type* Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& c
 		return macroType; // TODO
 	} case NodeType::LIST: {
 		NodeList& expr2 = static_cast<NodeList&>(expr);
+		Type* elemType = nullptr;
 		for(const std::unique_ptr<Node>& val : expr2.val) {
-			compileExpression(curFunc, *val, ctx);
+			Type* elemType2 = compileExpression(curFunc, *val, ctx);
+			if(elemType) {
+				if(elemType->canBeAssignedTo(elemType2)) {
+					elemType = elemType2;
+				} else if(!elemType2->canBeAssignedTo(elemType)) {
+					throw CompileError("Cannot mix " + elemType->getDesc() + " and " + elemType2->getDesc() + " in list literal");
+				}
+			} else {
+				elemType = elemType2;
+			}
 		}
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::MAKE_LIST);
 		if(expr2.val.size() > 0xffff)
 			throw CompileError("Too many elements in list literal");
 		writeUI16(curFunc.codeOut, (uint16_t) expr2.val.size());
-		return listType;
+		return new ListType(elemType);
 	} default:
 		throw CompileError("Expression type not implemented: " + nodeTypeDesc(expr.type));
 	}

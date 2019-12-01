@@ -32,6 +32,8 @@ public:
 	
 	bool canBeAssignedTo(Type* other) override;
 	
+	void markChildren() override;
+	
 private:
 	Type* parent;
 };
@@ -45,6 +47,20 @@ public:
 	
 	bool canBeAssignedTo(Type* other) override;
 	std::string getDesc() override;
+	
+	void markChildren() override;
+};
+
+class ListType : public Type {
+public:
+	Type* elemType; // nullptr represents empty list
+	
+	ListType(Type* elemType);
+	
+	bool canBeAssignedTo(Type* other) override;
+	std::string getDesc() override;
+	
+	void markChildren() override;
 };
 
 

@@ -68,10 +68,6 @@ namespace GC {
 		add(this);
 	}
 	
-	GCObject::GCObject(GCObject const&) : _marked(false) {
-		add(this);
-	}
-	
 	GCObject::~GCObject() {
 		IF_DEBUG_GC(std::cout << "Deleted GCObject " << this << std::endl;)
 	}
