@@ -13,8 +13,7 @@ TIME_CMD := /c/msys64/usr/bin/time -p -q
 build: $(OUTPUT)
 
 test: $(OUTPUT) test.smr
-	./$(OUTPUT) compile test.smr
-	$(TIME_CMD) ./$(OUTPUT) run test.sbf
+	$(TIME_CMD) ./$(OUTPUT) interpret test.smr
 
 clean:
 	rm -rf build
@@ -31,7 +30,7 @@ release: $(OUTPUT)
 debug: CFLAGS := -g $(CFLAGS)
 debug: $(OUTPUT)
 
-debug-gc: CFLAGS := -DDEBUG_GC $(CFLAGS)
+debug-gc: CFLAGS := -g -DDEBUG_GC $(CFLAGS)
 debug-gc: $(OUTPUT)
 
 profile: CFLAGS := -O3 -pg $(CFLAGS)
