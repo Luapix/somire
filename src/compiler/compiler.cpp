@@ -37,6 +37,10 @@ void Context::defineLocal(std::string var, Type* type) {
 	innerLocalCount++;
 }
 
+void Context::changeType(std::string var, Type* type) {
+	variables[var].type = type;
+}
+
 uint16_t Context::getLocalCount() {
 	return innerLocalCount;
 }
@@ -66,7 +70,8 @@ std::unique_ptr<Chunk> Compiler::compileProgram(std::unique_ptr<Node> ast) {
 	curChunk = std::unique_ptr<Chunk>(new Chunk());
 	if(ast->type != NodeType::BLOCK)
 		throw CompileError("Expected block to compile, got " + nodeTypeDesc(ast->type));
-	compileFunction(static_cast<NodeBlock&>(*ast), {}, {});
+	Type* resType = nullptr;
+	compileFunction(static_cast<NodeBlock&>(*ast), {}, {}, &resType);
 	return std::move(curChunk);
 }
 
@@ -84,35 +89,42 @@ Type* Compiler::getType(Node& type) {
 	}
 }
 
-std::vector<int16_t> Compiler::compileFunction(NodeBlock& block, std::vector<std::string> argNames, std::vector<Type*> argTypes, Context* parent) {
+std::vector<int16_t> Compiler::compileFunction(NodeBlock& block, std::vector<std::string> argNames, std::vector<Type*> argTypes, Type** resType, Context* parent) {
 	curChunk->functions.emplace_back(new FunctionChunk());
 	Context ctx(true, parent);
 	for(uint32_t i = 0; i < argNames.size(); i++) {
 		ctx.defineLocal(argNames[i], argTypes[i]);
 	}
-	compileBlock(*curChunk->functions.back(), block, ctx, false); // no need to pop locals at the end of a function
+	compileBlock(*curChunk->functions.back(), block, ctx, resType, true);
 	return ctx.getFunctionUpvalues();
 }
 
-void Compiler::compileBlock(FunctionChunk& curFunc, NodeBlock& block, Context& ctx, bool popLocals) {
+void Compiler::compileBlock(FunctionChunk& curFunc, NodeBlock& block, Context& ctx, Type** resType, bool mainBlock) {
 	for(const std::unique_ptr<Node>& stat : block.statements) {
-		compileStatement(curFunc, *stat, ctx);
+		compileStatement(curFunc, *stat, ctx, resType);
 	}
-	if(popLocals && ctx.getLocalCount() > 0) { // pop locals
+	if(!mainBlock && ctx.getLocalCount() > 0) { // pop locals
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::POP);
 		writeUI16(curFunc.codeOut, ctx.getLocalCount());
 	}
+	if(mainBlock &&
+	   (block.statements.size() == 0 || block.statements.back()->type != NodeType::RETURN)) {
+	   	// implicit return
+		*resType = nilType;
+	}
 }
 
-void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx) {
+void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx, Type** resType) {
 	switch(stat.type) {
 	case NodeType::LET: {
 		NodeLet& stat2 = static_cast<NodeLet&>(stat);
 		if(stat2.exp->type == NodeType::FUNC) // Define in advance to allow for recursion
-			ctx.defineLocal(stat2.id, macroType); // TODO
+			ctx.defineLocal(stat2.id, macroType); // To be improved
 		Type* valType = compileExpression(curFunc, *stat2.exp, ctx);
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::LET);
-		if(stat2.exp->type != NodeType::FUNC)
+		if(stat2.exp->type == NodeType::FUNC)
+			ctx.changeType(stat2.id, valType);
+		else
 			ctx.defineLocal(stat2.id, valType);
 		break;
 	} case NodeType::SET: {
@@ -139,7 +151,7 @@ void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx
 		uint32_t addPos = curFunc.code.size();
 		writeI16(curFunc.codeOut, 0);
 		Context thenCtx(false, &ctx);
-		compileBlock(curFunc, static_cast<NodeBlock&>(*stat2.thenBlock), thenCtx);
+		compileBlock(curFunc, static_cast<NodeBlock&>(*stat2.thenBlock), thenCtx, resType);
 		uint32_t addPos2;
 		if(stat2.elseBlock) {
 			writeUI8(curFunc.codeOut, (uint8_t) Opcode::JUMP);
@@ -149,7 +161,7 @@ void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx
 		curFunc.fillInJump(addPos);
 		if(stat2.elseBlock) {
 			Context elseCtx(false, &ctx);
-			compileBlock(curFunc, static_cast<NodeBlock&>(*stat2.elseBlock), elseCtx);
+			compileBlock(curFunc, static_cast<NodeBlock&>(*stat2.elseBlock), elseCtx, resType);
 			curFunc.fillInJump(addPos2);
 		}
 		break;
@@ -163,16 +175,25 @@ void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx
 		uint32_t addPos = curFunc.code.size();
 		writeI16(curFunc.codeOut, 0);
 		Context innerCtx(false, &ctx);
-		compileBlock(curFunc, static_cast<NodeBlock&>(*stat2.block), innerCtx);
+		compileBlock(curFunc, static_cast<NodeBlock&>(*stat2.block), innerCtx, resType);
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::JUMP);
 		writeI16(curFunc.codeOut, computeJump(curFunc.code.size() + 2, before));
 		curFunc.fillInJump(addPos);
 		break;
-	} case NodeType::RETURN:
-		compileExpression(curFunc, *static_cast<NodeReturn&>(stat).expr, ctx);
+	} case NodeType::RETURN: {
+		Type* resType2 = compileExpression(curFunc, *static_cast<NodeReturn&>(stat).expr, ctx);
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::RETURN);
+		if(*resType) {
+			if((*resType)->canBeAssignedTo(resType2)) {
+				*resType = resType2;
+			} else if(!resType2->canBeAssignedTo(*resType)) {
+				throw CompileError("Returning " + (*resType)->getDesc() + " somewhere, and " + resType2->getDesc() + " somewhere else");
+			}
+		} else {
+			*resType = resType2;
+		}
 		break;
-	default:
+	} default:
 		throw CompileError("Statement type not implemented: " + nodeTypeDesc(stat.type));
 	}
 }
@@ -340,14 +361,15 @@ Type* Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& c
 		for(auto& argTypeDesc : expr2.argTypes) {
 			argTypes.push_back(getType(*argTypeDesc));
 		}
-		std::vector<int16_t> upvalues = compileFunction(static_cast<NodeBlock&>(*expr2.block), expr2.argNames, argTypes, &ctx);
+		Type* resType = nullptr;
+		std::vector<int16_t> upvalues = compileFunction(static_cast<NodeBlock&>(*expr2.block), expr2.argNames, argTypes, &resType, &ctx);
 		if(upvalues.size() > 0xffff)
 			throw CompileError("Too many upvalues in function definition");
 		writeUI16(curFunc.codeOut, (uint16_t) upvalues.size());
 		for(int16_t upvalue : upvalues) {
 			writeI16(curFunc.codeOut, upvalue);
 		}
-		return macroType; // TODO
+		return new FunctionType(argTypes, resType);
 	} case NodeType::LIST: {
 		NodeList& expr2 = static_cast<NodeList&>(expr);
 		Type* elemType = nullptr;

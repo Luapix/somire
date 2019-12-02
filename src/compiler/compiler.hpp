@@ -22,6 +22,7 @@ public:
 	
 	std::optional<Variable> getVariable(std::string varName);
 	void defineLocal(std::string var, Type* type);
+	void changeType(std::string var, Type* type);
 	uint16_t getLocalCount();
 	
 	std::vector<int16_t>& getFunctionUpvalues();
@@ -52,9 +53,9 @@ private:
 	GC::Root<TypeNamespace> globals;
 	
 	Type* getType(Node& type);
-	std::vector<int16_t> compileFunction(NodeBlock& block, std::vector<std::string> argNames, std::vector<Type*> argTypes, Context* parent = nullptr);
-	void compileBlock(FunctionChunk& curFunc, NodeBlock& block, Context& ctx, bool popLocals = true);
-	void compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx);
+	std::vector<int16_t> compileFunction(NodeBlock& block, std::vector<std::string> argNames, std::vector<Type*> argTypes, Type** resType, Context* parent = nullptr);
+	void compileBlock(FunctionChunk& curFunc, NodeBlock& block, Context& ctx, Type** resType, bool mainBlock = false);
+	void compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx, Type** resType);
 	Type* compileExpression(FunctionChunk& curFunc, Node& expr, Context& ctx);
 	void compileConstant(FunctionChunk& curFunc, Value val);
 };
