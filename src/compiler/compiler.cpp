@@ -66,15 +66,29 @@ std::unique_ptr<Chunk> Compiler::compileProgram(std::unique_ptr<Node> ast) {
 	curChunk = std::unique_ptr<Chunk>(new Chunk());
 	if(ast->type != NodeType::BLOCK)
 		throw CompileError("Expected block to compile, got " + nodeTypeDesc(ast->type));
-	compileFunction(static_cast<NodeBlock&>(*ast), std::vector<std::string>());
+	compileFunction(static_cast<NodeBlock&>(*ast), {}, {});
 	return std::move(curChunk);
 }
 
-std::vector<int16_t> Compiler::compileFunction(NodeBlock& block, std::vector<std::string> argNames, Context* parent) {
+Type* Compiler::getType(Node& type) {
+	auto simpleType = dynamic_cast<NodeSimpleType*>(&type);
+	if(simpleType) {
+		auto it = types->map.find(simpleType->name);
+		if(it != types->map.end()) {
+			return it->second;
+		} else {
+			throw CompileError("Unknown type " + simpleType->name);
+		}
+	} else {
+		throw CompileError("Invalid node for type constraint: " + nodeTypeDesc(type.type));
+	}
+}
+
+std::vector<int16_t> Compiler::compileFunction(NodeBlock& block, std::vector<std::string> argNames, std::vector<Type*> argTypes, Context* parent) {
 	curChunk->functions.emplace_back(new FunctionChunk());
 	Context ctx(true, parent);
-	for(std::string arg : argNames) {
-		ctx.defineLocal(arg, anyType); // TODO
+	for(uint32_t i = 0; i < argNames.size(); i++) {
+		ctx.defineLocal(argNames[i], argTypes[i]);
 	}
 	compileBlock(*curChunk->functions.back(), block, ctx, false); // no need to pop locals at the end of a function
 	return ctx.getFunctionUpvalues();
@@ -322,7 +336,11 @@ Type* Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& c
 		if(expr2.argNames.size() > 0xffff)
 			throw CompileError("Too many arguments in function definition");
 		writeUI16(curFunc.codeOut, (uint16_t) expr2.argNames.size());
-		std::vector<int16_t> upvalues = compileFunction(static_cast<NodeBlock&>(*expr2.block), expr2.argNames, &ctx);
+		std::vector<Type*> argTypes;
+		for(auto& argTypeDesc : expr2.argTypes) {
+			argTypes.push_back(getType(*argTypeDesc));
+		}
+		std::vector<int16_t> upvalues = compileFunction(static_cast<NodeBlock&>(*expr2.block), expr2.argNames, argTypes, &ctx);
 		if(upvalues.size() > 0xffff)
 			throw CompileError("Too many upvalues in function definition");
 		writeUI16(curFunc.codeOut, (uint16_t) upvalues.size());

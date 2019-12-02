@@ -77,6 +77,42 @@ int Parser<C>::getInfixPrecedence() {
 }
 
 template<typename C>
+std::unique_ptr<Node> Parser<C>::parseType() {
+	if(curToken->type != NodeType::ID)
+		error("Expected identifier in type constraint, got " + nodeTypeDesc(curToken->type));
+	std::unique_ptr<Node> idToken = nextToken();
+	return std::unique_ptr<Node>(new NodeSimpleType(static_cast<NodeId*>(idToken.get())->val));
+}
+
+template<typename C>
+std::unique_ptr<Node> Parser<C>::parseFunction() {
+	discardSymbol("(");
+	std::vector<std::string> argNames;
+	std::vector<std::unique_ptr<Node>> argTypes;
+	if(!isCurSymbol(")")) {
+		while(true) {
+			if(curToken->type != NodeType::ID)
+				error("Expected identifier in argument list, got " + nodeTypeDesc(curToken->type));
+			std::unique_ptr<Node> argToken = nextToken();
+			argNames.push_back(static_cast<NodeId*>(argToken.get())->val);
+			if(isCurSymbol(":")) {
+				nextToken();
+				argTypes.push_back(parseType());
+			} else {
+				argTypes.emplace_back(new NodeSimpleType("any"));
+			}
+			if(isCurSymbol(")")) {
+				break;
+			}
+			discardSymbol(",");
+		}
+	}
+	nextToken();
+	discardSymbol(":");
+	return std::unique_ptr<Node>(new NodeFunction(argNames, std::move(argTypes), parseIndentedBlock()));
+}
+
+template<typename C>
 std::unique_ptr<Node> Parser<C>::parseExpr(int prec) {
 	std::unique_ptr<Node> exp;
 	if(terminals.find(curToken->type) != terminals.end()) {
@@ -154,23 +190,7 @@ std::unique_ptr<Node> Parser<C>::parseMultilineExpr() {
 	std::unique_ptr<Node> exp;
 	if(isCurSymbol("fun")) {
 		nextToken();
-		discardSymbol("(");
-		std::vector<std::string> argNames;
-		if(!isCurSymbol(")")) {
-			while(true) {
-				if(curToken->type != NodeType::ID)
-					error("Expected identifier in argument list, got " + nodeTypeDesc(curToken->type));
-				std::unique_ptr<Node> argToken = nextToken();
-				argNames.push_back(static_cast<NodeId*>(argToken.get())->val);
-				if(isCurSymbol(")"))
-					break;
-				else
-					discardSymbol(",");
-			}
-		}
-		nextToken();
-		discardSymbol(":");
-		exp = std::unique_ptr<Node>(new NodeFunction(argNames, parseIndentedBlock()));
+		exp = parseFunction();
 	} else {
 		exp = parseExpr();
 		finishStatement();
@@ -214,23 +234,7 @@ std::unique_ptr<Node> Parser<C>::parseStatement() {
 		std::string id = static_cast<NodeId*>(idToken.get())->val;
 		std::unique_ptr<Node> expr;
 		if(isCurSymbol("(")) {
-			nextToken();
-			std::vector<std::string> argNames;
-			if(!isCurSymbol(")")) {
-				while(true) {
-					if(curToken->type != NodeType::ID)
-						error("Expected identifier in argument list, got " + nodeTypeDesc(curToken->type));
-					std::unique_ptr<Node> argToken = nextToken();
-					argNames.push_back(static_cast<NodeId*>(argToken.get())->val);
-					if(isCurSymbol(")"))
-						break;
-					else
-						discardSymbol(",");
-				}
-			}
-			nextToken();
-			discardSymbol(":");
-			expr = std::unique_ptr<Node>(new NodeFunction(argNames, parseIndentedBlock()));
+			expr = parseFunction();
 		} else {
 			discardSymbol("=");
 			expr = parseMultilineExpr();

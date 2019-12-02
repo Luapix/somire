@@ -29,6 +29,7 @@ std::string nodeTypeDesc(NodeType type) {
 	case NodeType::BLOCK: return "block";
 	case NodeType::LIST: return "list";
 	case NodeType::PROP: return "prop";
+	case NodeType::SIMPLE_TYPE: return "simple type";
 	default:
 		throw std::runtime_error("Unknown node type");
 	}
@@ -145,8 +146,8 @@ NodeReturn::NodeReturn(std::unique_ptr<Node> expr) : Node(NodeType::RETURN), exp
 
 std::string NodeReturn::getDataDesc(std::string prefix) { return " " + expr->toString(prefix); }
 
-NodeFunction::NodeFunction(std::vector<std::string> argNames, std::unique_ptr<Node> block)
-	: Node(NodeType::FUNC), argNames(argNames), block(std::move(block)) {}
+NodeFunction::NodeFunction(std::vector<std::string> argNames, std::vector<std::unique_ptr<Node>> argTypes, std::unique_ptr<Node> block)
+	: Node(NodeType::FUNC), argNames(argNames), argTypes(std::move(argTypes)), block(std::move(block)) {}
 
 std::string NodeFunction::getDataDesc(std::string prefix) {
 	std::string res = "(";
@@ -187,3 +188,10 @@ NodeProp::NodeProp(std::unique_ptr<Node> val, std::string prop)
 	: Node(NodeType::PROP), val(std::move(val)), prop(prop) {}
 
 std::string NodeProp::getDataDesc(std::string prefix) { return " " + prefix + " of " + val->toString(prefix); }
+
+NodeSimpleType::NodeSimpleType(std::string name)
+	: Node(NodeType::SIMPLE_TYPE), name(name) {}
+
+std::string NodeSimpleType::getDataDesc(std::string prefix) {
+	return " '" + name + "'";
+}

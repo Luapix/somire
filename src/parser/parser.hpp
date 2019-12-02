@@ -30,6 +30,8 @@ private:
 	bool isCurSymbol(std::string sym);
 	
 	int getInfixPrecedence();
+	std::unique_ptr<Node> parseType();
+	std::unique_ptr<Node> parseFunction();
 	std::unique_ptr<Node> parseExpr(int prec = 0);
 	std::unique_ptr<Node> parseMultilineExpr();
 	void finishStatement();

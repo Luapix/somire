@@ -23,7 +23,8 @@ enum class NodeType {
 	FUNC,
 	BLOCK,
 	LIST,
-	PROP
+	PROP,
+	SIMPLE_TYPE
 };
 
 std::string nodeTypeDesc(NodeType type);
@@ -205,9 +206,10 @@ protected:
 
 class NodeFunction : public Node {
 public:
-	NodeFunction(std::vector<std::string> argNames, std::unique_ptr<Node> block);
+	NodeFunction(std::vector<std::string> argNames, std::vector<std::unique_ptr<Node>> argTypes, std::unique_ptr<Node> block);
 	
 	const std::vector<std::string> argNames;
+	const std::vector<std::unique_ptr<Node>> argTypes;
 	const std::unique_ptr<Node> block;
 	
 protected:
@@ -241,6 +243,16 @@ public:
 	const std::unique_ptr<Node> val;
 	const std::string prop;
 
+protected:
+	std::string getDataDesc(std::string prefix) override;
+};
+
+class NodeSimpleType : public Node {
+public:
+	NodeSimpleType(std::string name);
+	
+	const std::string name;
+	
 protected:
 	std::string getDataDesc(std::string prefix) override;
 };
