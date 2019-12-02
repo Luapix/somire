@@ -74,6 +74,12 @@ Value listSize(std::vector<Value>& args) {
 	return Value((int32_t) list.vec.size());
 }
 
+Value toBool(std::vector<Value>& args) {
+	if(!args[0].isBool())
+		throw ExecutionError("Cannot convert " + args[0].toString() + " to bool");
+	return args[0];
+}
+
 void loadStd(Namespace& ns) {
 	ns.map["log"] = Value(new CFunction(log));
 	ns.map["repr"] = Value(new CFunction(repr));
@@ -82,6 +88,7 @@ void loadStd(Namespace& ns) {
 	ns.map["listNew"] = Value(new CFunction(listNew));
 	ns.map["listAdd"] = Value(new CFunction(listAdd));
 	ns.map["listSize"] = Value(new CFunction(listSize));
+	ns.map["bool"] = Value(new CFunction(toBool));
 }
 
 void defineStdTypes(TypeNamespace& ns, TypeNamespace& types) {
@@ -92,4 +99,5 @@ void defineStdTypes(TypeNamespace& ns, TypeNamespace& types) {
 	ns.map["listNew"] = new FunctionType({}, new ListType(nullptr));
 	ns.map["listAdd"] = types.map["macro"];
 	ns.map["listSize"] = new FunctionType({new ListType(types.map["any"])}, types.map["int"]);
+	ns.map["bool"] = new FunctionType({types.map["any"]}, types.map["bool"]);
 }
