@@ -2,11 +2,30 @@
 
 Type::Type(std::string name, bool isAny) : name(name), _isAny(isAny) {}
 
+void Type::defineMethod(std::string methodName, Type* methodType) {
+	methods[methodName] = methodType;
+}
+
+Type* Type::getMethod(std::string methodName) {
+	auto it = methods.find(methodName);
+	if(it != methods.end()) {
+		return it->second;
+	} else {
+		return nullptr;
+	}
+}
+
 bool Type::canBeAssignedTo(Type* other) {
 	return this == other || other->isAny();
 }
 
 std::string Type::getDesc() { return name; }
+
+void Type::markChildren() {
+	for(auto& pair : methods) {
+		pair.second->mark();
+	}
+}
 
 
 UnknownType::UnknownType() : Type("unknown") {}
@@ -23,6 +42,7 @@ bool Subtype::canBeAssignedTo(Type* other) {
 }
 
 void Subtype::markChildren() {
+	Type::markChildren();
 	parent->mark();
 }
 
@@ -52,6 +72,7 @@ std::string FunctionType::getDesc() {
 }
 
 void FunctionType::markChildren() {
+	Type::markChildren();
 	for(Type* argType : argTypes) {
 		argType->mark();
 	}
@@ -77,6 +98,7 @@ std::string ListType::getDesc() {
 }
 
 void ListType::markChildren() {
+	Type::markChildren();
 	if(elemType)
 		elemType->mark();
 }
