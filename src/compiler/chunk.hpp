@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <iterator>
 
-#include "vm/gc.hpp"
+#include "util/gc.hpp"
 #include "vm/value.hpp"
 
 class CompileError : public std::runtime_error {
