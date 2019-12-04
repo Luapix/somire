@@ -142,28 +142,22 @@ std::string Chunk::list() {
 				}
 				res << "]";
 				break;
-			} case Opcode::LOCAL:
+			}
 			case Opcode::SET_LOCAL:
+			case Opcode::LOCAL:
 				res << " " << (int) readI16(it);
 				break;
 			case Opcode::CONSTANT:
-			case Opcode::GLOBAL:
 			case Opcode::POP:
+			case Opcode::GLOBAL:
 			case Opcode::CALL:
+			case Opcode::MAKE_LIST:
 				res << " " << (int) readUI16(it);
 				break;
 			case Opcode::JUMP_IF_NOT:
 			case Opcode::JUMP:
 				res << " " << (int) readI16(it);
 				break;
-			case Opcode::IGNORE:
-			case Opcode::UNI_MINUS:
-			case Opcode::BIN_PLUS:
-			case Opcode::NOT:
-			case Opcode::AND:
-			case Opcode::OR:
-			case Opcode::EQUALS:
-			case Opcode::LET:
 			default:
 				break;
 			}
