@@ -209,6 +209,144 @@ std::unordered_map<std::string, Opcode> binaryOps = {
 	{"index", Opcode::INDEX}
 };
 
+Type* Compiler::typeExpression(NodeExp& exp, Context& ctx) {
+	switch(exp.type) {
+	case NodeType::INT:
+		return exp.valueType = intType;
+	case NodeType::REAL:
+		return exp.valueType = realType;
+	case NodeType::STR:
+		return exp.valueType = stringType;
+	case NodeType::SYM: {
+		NodeSymbol& exp2 = static_cast<NodeSymbol&>(exp);
+		if(exp2.val == "nil") {
+			return exp.valueType = nilType;
+		} else if(exp2.val == "true" || exp2.val == "false") {
+			return exp.valueType = boolType;
+		} else {
+			throw CompileError("Unexpected keyword in expression: " + exp2.val);
+		}
+	} case NodeType::ID: {
+		NodeId& exp2 = static_cast<NodeId&>(exp);
+		std::optional<Variable> var = ctx.getVariable(exp2.val);
+		if(var) {
+			return exp.valueType = var->type;
+		} else {
+			auto it = globals->map.find(exp2.val);
+			if(it != globals->map.end()) {
+				return exp.valueType = it->second;
+			} else {
+				throw CompileError("Trying to access unknown variable: " + exp2.val);
+			}
+		}
+	} case NodeType::UNI_OP: {
+		NodeUnary& exp2 = static_cast<NodeUnary&>(exp);
+		Type* valType = typeExpression(*exp2.val, ctx);
+		if(exp2.op == "-") {
+			return exp.valueType = valType;
+		} else if(exp2.op == "not") {
+			return exp.valueType = boolType;
+		} else {
+			throw CompileError("Unknown unary operator: " + exp2.op);
+		}
+	} case NodeType::BIN_OP: {
+		NodeBinary& exp2 = static_cast<NodeBinary&>(exp);
+		Type* type1 = typeExpression(*exp2.left, ctx);
+		Type* type2 = typeExpression(*exp2.right, ctx);
+		bool i1 = type1->canBeAssignedTo(intType),  i2 = type2->canBeAssignedTo(intType),
+		     r1 = type1->canBeAssignedTo(realType), r2 = type2->canBeAssignedTo(realType);
+		if(numericOps.find(exp2.op) != numericOps.end()) {
+			if(i1 && i2) {
+				return exp.valueType = intType;
+			} else if(r1 && r2) {
+				return exp.valueType = realType;
+			} else {
+				throw CompileError("Trying to perform arithmetic on " + type1->getDesc() + " and " + type2->getDesc());
+			}
+		} else if(comparisonOps.find(exp2.op) != comparisonOps.end()) {
+			if(r1 && r2) {
+				return exp.valueType = boolType;
+			} else {
+				throw CompileError("Trying to compare " + type1->getDesc() + " and " + type2->getDesc());
+			}
+		} else if(exp2.op == "==" || exp2.op == "!=") {
+			return exp.valueType = boolType;
+		} else if(exp2.op == "/" || exp2.op == "^") {
+			if(r1 && r2) {
+				return exp.valueType = realType;
+			} else {
+				throw CompileError("Trying to perform real operations on " + type1->getDesc() + " and " + type2->getDesc());
+			}
+		} else if(exp2.op == "and" || exp2. op == "or") {
+			if(type1->canBeAssignedTo(boolType) && type2->canBeAssignedTo(boolType)) {
+				return exp.valueType = boolType;
+			} else {
+				throw CompileError("Trying to perform boolean operations on " + type1->getDesc() + " and " + type2->getDesc());
+			}
+		} else if(exp2.op == "index") {
+			ListType* listType = dynamic_cast<ListType*>(type1);
+			if(listType && listType->elemType && type2->canBeAssignedTo(intType)) {
+				return exp.valueType = listType->elemType;
+			} else {
+				throw CompileError("Trying to index " + type1->getDesc() + " with " + type2->getDesc());
+			}
+		}
+		throw CompileError("Type deduction not implemented for operator " + exp2.op);
+	} case NodeType::CALL: {
+		NodeCall& exp2 = static_cast<NodeCall&>(exp);
+		std::vector<Type*> argTypes;
+		for(auto& arg : exp2.args) {
+			argTypes.push_back(typeExpression(*arg, ctx));
+		}
+		Type* funcType = typeExpression(*exp2.func, ctx);
+		
+		FunctionType* funcType2;
+		if(funcType->canBeAssignedTo(macroType)) {
+			return anyType;
+		} else if(funcType2 = dynamic_cast<FunctionType*>(funcType)) {
+			uint32_t expected = funcType2->argTypes.size();
+			uint32_t got = argTypes.size();
+			if(got != expected)
+				throw CompileError("Expected " + std::to_string(expected) + " arguments in function call, got " + std::to_string(got));
+			for(uint32_t i = 0; i < got; i++) {
+				if(!argTypes[i]->canBeAssignedTo(funcType2->argTypes[i]))
+					throw CompileError("Cannot assign " + argTypes[i]->getDesc() + " to " + funcType2->argTypes[i]->getDesc() + " argument");
+			}
+			return exp.valueType = funcType2->resType;
+		} else {
+			throw CompileError("Trying to call " + funcType->getDesc());
+		}
+	} case NodeType::FUNC: {
+		NodeFunction& exp2 = static_cast<NodeFunction&>(exp);
+		exp2.protoIdx = curChunk->functions.size();
+		std::vector<Type*> argTypes;
+		for(auto& argTypeDesc : exp2.argTypes) {
+			argTypes.push_back(getType(*argTypeDesc));
+		}
+		Type* resType = nullptr;
+		exp2.upvalues = compileFunction(static_cast<NodeBlock&>(*exp2.block), exp2.argNames, argTypes, &resType, &ctx);
+		return exp.valueType = new FunctionType(argTypes, resType);
+	} case NodeType::LIST: {
+		NodeList& exp2 = static_cast<NodeList&>(exp);
+		Type* elemType = nullptr;
+		for(NodeExp* val : exp2.vals) {
+			Type* elemType2 = typeExpression(*val, ctx);
+			if(elemType) {
+				if(elemType->canBeAssignedTo(elemType2)) {
+					elemType = elemType2;
+				} else if(!elemType2->canBeAssignedTo(elemType)) {
+					throw CompileError("Cannot mix " + elemType->getDesc() + " and " + elemType2->getDesc() + " in list literal");
+				}
+			} else {
+				elemType = elemType2;
+			}
+		}
+		return exp.valueType = new ListType(elemType);
+	} default:
+		throw CompileError("Expression type not implemented: " + nodeTypeDesc(exp.type));
+	}
+}
+
 Type* Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& ctx) {
 	switch(expr.type) {
 	case NodeType::INT:
