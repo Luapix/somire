@@ -42,7 +42,7 @@ class Compiler {
 public:
 	Compiler();
 	
-	std::unique_ptr<Chunk> compileProgram(std::unique_ptr<Node> ast);
+	std::unique_ptr<Chunk> compileProgram(Node* ast);
 	
 private:
 	std::unique_ptr<Chunk> curChunk;

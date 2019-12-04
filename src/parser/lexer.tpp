@@ -49,7 +49,7 @@ void Lexer<C>::skipSpace(bool allowNL) {
 }
 
 template<typename C>
-std::unique_ptr<Node> Lexer<C>::lexNewline() {
+GC::Root<Node> Lexer<C>::lexNewline() {
 	std::string newIndent;
 	while(isSpace(curChar)) {
 		if(curChar == '\n') {
@@ -60,7 +60,7 @@ std::unique_ptr<Node> Lexer<C>::lexNewline() {
 		}
 		nextChar();
 	}
-	std::unique_ptr<Node> newline;
+	GC::Root<Node> newline;
 	if(newIndent == curIndent) {
 		newline.reset(new Node(NodeType::NL));
 	} else if(newIndent.substr(0, curIndent.length()) == curIndent) {
@@ -83,7 +83,7 @@ std::unordered_set<std::string> keywords = {
 };
 
 template<typename C>
-std::unique_ptr<Node> Lexer<C>::lexId() {
+GC::Root<Node> Lexer<C>::lexId() {
 	std::string val = strFromCP(curChar);
 	nextChar();
 	while(isIdContinue(curChar)) {
@@ -91,9 +91,9 @@ std::unique_ptr<Node> Lexer<C>::lexId() {
 		nextChar();
 	}
 	if(keywords.find(val) != keywords.end()) {
-		return std::unique_ptr<Node>(new NodeSymbol(val));
+		return GC::Root<Node>(new NodeSymbol(val));
 	} else {
-		return std::unique_ptr<Node>(new NodeId(val));
+		return GC::Root<Node>(new NodeId(val));
 	}
 }
 
@@ -101,7 +101,7 @@ std::unique_ptr<Node> Lexer<C>::lexId() {
 	#error Can''t be bothered to deal with 16-bit ints
 #endif
 template<typename C>
-std::unique_ptr<Node> Lexer<C>::lexNumber() {
+GC::Root<Node> Lexer<C>::lexNumber() {
 	std::string s;
 	unsigned int base = 10;
 	bool isReal = false;
@@ -113,7 +113,7 @@ std::unique_ptr<Node> Lexer<C>::lexNumber() {
 			else if(b == 'b') base = 2;
 			if(!isDigit(peekChar2, base)) { // the literal stops at 0
 				nextChar();
-				return std::unique_ptr<Node>(new NodeInt(0));
+				return GC::Root<Node>(new NodeInt(0));
 			}
 			nextChar(); nextChar(); // skip base specifier
 		}
@@ -147,7 +147,7 @@ std::unique_ptr<Node> Lexer<C>::lexNumber() {
 			error("Real literal too large");
 		}
 		assert(end == s.size());
-		return std::unique_ptr<Node>(new NodeReal(val));
+		return GC::Root<Node>(new NodeReal(val));
 	} else {
 		size_t end;
 		int val;
@@ -158,12 +158,12 @@ std::unique_ptr<Node> Lexer<C>::lexNumber() {
 		}
 		assert(end == s.size());
 		std::int32_t val2 = static_cast<std::int32_t>(val);
-		return std::unique_ptr<Node>(new NodeInt(val2));
+		return GC::Root<Node>(new NodeInt(val2));
 	}
 }
 
 template<typename C>
-std::unique_ptr<Node> Lexer<C>::lexString() {
+GC::Root<Node> Lexer<C>::lexString() {
 	uni_cp delimiter = curChar;
 	nextChar();
 	std::string val;
@@ -215,7 +215,7 @@ std::unique_ptr<Node> Lexer<C>::lexString() {
 		nextChar();
 	}
 	nextChar(); // skip end delimiter
-	return std::unique_ptr<Node>(new NodeString(val));
+	return GC::Root<Node>(new NodeString(val));
 }
 
 std::unordered_set<uni_cp> symbolChars = {
@@ -231,23 +231,23 @@ std::unordered_set<std::string> symbolStrings = {
 };
 
 template<typename C>
-std::unique_ptr<Node> Lexer<C>::lexSymbol() {
+GC::Root<Node> Lexer<C>::lexSymbol() {
 	if(peekChar != UNI_EOI && symbolStrings.find(strFromCP(curChar) + strFromCP(peekChar)) != symbolStrings.end()) {
 		std::string sym = strFromCP(curChar) + strFromCP(peekChar);
 		nextChar(); nextChar();
-		return std::unique_ptr<Node>(new NodeSymbol(sym));
+		return GC::Root<Node>(new NodeSymbol(sym));
 	} else if(symbolChars.find(curChar) != symbolChars.end()) {
 		std::string sym = strFromCP(curChar);
 		nextChar();
-		return std::unique_ptr<Node>(new NodeSymbol(sym));
+		return GC::Root<Node>(new NodeSymbol(sym));
 	} else {
 		error("Unexpected character: " + strFromCP(curChar));
 	}
 }
 
 template<typename C>
-std::unique_ptr<Node> Lexer<C>::lexToken() {
-	std::unique_ptr<Node> token;
+GC::Root<Node> Lexer<C>::lexToken() {
+	GC::Root<Node> token;
 	
 	if(curLine == 0) {
 		curLine++;
@@ -261,7 +261,7 @@ std::unique_ptr<Node> Lexer<C>::lexToken() {
 	else if(curChar == '\n')
 		token = lexNewline();
 	else if(curChar == UNI_EOI)
-		token = std::unique_ptr<Node>(new Node(NodeType::EOI));
+		token = GC::Root<Node>(new Node(NodeType::EOI));
 	else
 		token = lexSymbol();
 	

@@ -46,19 +46,26 @@ std::string Node::getDataDesc(std::string prefix) { return ""; }
 NodeIndent::NodeIndent(std::string oldIndent) : Node(NodeType::INDENT), oldIndent(oldIndent) {}
 NodeDedent::NodeDedent(std::string newIndent) : Node(NodeType::DEDENT), newIndent(newIndent) {}
 
-NodeId::NodeId(std::string val) : Node(NodeType::ID), val(val) {}
+NodeExp::NodeExp(NodeType type) : Node(type), valueType(nullptr) {}
+
+void NodeExp::markChildren() {
+	if(valueType)
+		valueType->mark();
+}
+
+NodeId::NodeId(std::string val) : NodeExp(NodeType::ID), val(val) {}
 
 std::string NodeId::getDataDesc(std::string prefix) {
 	return " " + val;
 }
 
-NodeInt::NodeInt(std::int32_t val) : Node(NodeType::INT), val(val) {}
+NodeInt::NodeInt(std::int32_t val) : NodeExp(NodeType::INT), val(val) {}
 
 std::string NodeInt::getDataDesc(std::string prefix) {
 	return " " + std::to_string(val);
 }
 
-NodeReal::NodeReal(double val) : Node(NodeType::REAL), val(val) {}
+NodeReal::NodeReal(double val) : NodeExp(NodeType::REAL), val(val) {}
 
 std::string NodeReal::getDataDesc(std::string prefix) {
 	char buf[50];
@@ -79,28 +86,47 @@ std::string NodeReal::getDataDesc(std::string prefix) {
 	return " " + std::string(buf);
 }
 
-NodeString::NodeString(std::string val) : Node(NodeType::STR), val(val) {}
+NodeString::NodeString(std::string val) : NodeExp(NodeType::STR), val(val) {}
 
 std::string NodeString::getDataDesc(std::string prefix) {
 	return " " + escapeString(val);
 }
 
-NodeSymbol::NodeSymbol(std::string val) : Node(NodeType::SYM), val(val) {}
+NodeSymbol::NodeSymbol(std::string val) : NodeExp(NodeType::SYM), val(val) {}
 
 std::string NodeSymbol::getDataDesc(std::string prefix) { return " " + val; }
 
-NodeUnary::NodeUnary(std::string op, std::unique_ptr<Node> val)
-	: Node(NodeType::UNI_OP), op(op), val(std::move(val)) {}
+NodeUnary::NodeUnary(std::string op, NodeExp* val)
+	: NodeExp(NodeType::UNI_OP), op(op), val(val) {}
+
+void NodeUnary::markChildren() {
+	NodeExp::markChildren();
+	val->mark();
+}
 
 std::string NodeUnary::getDataDesc(std::string prefix) { return " " + op + " " + val->toString(prefix); }
 
-NodeBinary::NodeBinary(std::string op, std::unique_ptr<Node> left, std::unique_ptr<Node> right)
-	: Node(NodeType::BIN_OP), op(op), left(std::move(left)), right(std::move(right)) {}
+NodeBinary::NodeBinary(std::string op, NodeExp* left, NodeExp* right)
+	: NodeExp(NodeType::BIN_OP), op(op), left(left), right(right) {}
+
+void NodeBinary::markChildren() {
+	NodeExp::markChildren();
+	left->mark();
+	right->mark();
+}
 
 std::string NodeBinary::getDataDesc(std::string prefix) { return " " + op + " " + left->toString(prefix) + " " + right->toString(prefix); }
 
-NodeCall::NodeCall(std::unique_ptr<Node> func, std::vector<std::unique_ptr<Node>> args)
-	: Node(NodeType::CALL), func(std::move(func)), args(std::move(args)) {}
+NodeCall::NodeCall(NodeExp* func, std::vector<NodeExp*> args)
+	: NodeExp(NodeType::CALL), func(func), args(args) {}
+
+void NodeCall::markChildren() {
+	NodeExp::markChildren();
+	func->mark();
+	for(Node* arg : args) {
+		arg->mark();
+	}
+}
 
 std::string NodeCall::getDataDesc(std::string prefix) {
 	std::string res = " " + func->toString(prefix) + " (";
@@ -113,22 +139,35 @@ std::string NodeCall::getDataDesc(std::string prefix) {
 	return res;
 }
 
-NodeLet::NodeLet(std::string id, std::unique_ptr<Node> exp)
-	: Node(NodeType::LET), id(id), exp(std::move(exp)) {}
+NodeLet::NodeLet(std::string id, NodeExp* exp)
+	: Node(NodeType::LET), id(id), exp(exp) {}
+
+void NodeLet::markChildren() { exp->mark(); }
 
 std::string NodeLet::getDataDesc(std::string prefix) { return " " + id + " = " + exp->toString(prefix); }
 
-NodeSet::NodeSet(std::string id, std::unique_ptr<Node> exp)
-	: Node(NodeType::SET), id(id), exp(std::move(exp)) {}
+NodeSet::NodeSet(std::string id, NodeExp* exp)
+	: Node(NodeType::SET), id(id), exp(exp) {}
+
+void NodeSet::markChildren() { exp->mark(); }
 
 std::string NodeSet::getDataDesc(std::string prefix) { return " " + id + " = " + exp->toString(prefix); }
 
-NodeExprStat::NodeExprStat(std::unique_ptr<Node> exp) : Node(NodeType::EXPR_STAT), exp(std::move(exp)) {}
+NodeExprStat::NodeExprStat(NodeExp* exp) : Node(NodeType::EXPR_STAT), exp(exp) {}
+
+void NodeExprStat::markChildren() { exp->mark(); }
 
 std::string NodeExprStat::getDataDesc(std::string prefix) { return " " + exp->toString(prefix); }
 
-NodeIf::NodeIf(std::unique_ptr<Node> cond, std::unique_ptr<Node> thenBlock) : Node(NodeType::IF),
-	cond(std::move(cond)), thenBlock(std::move(thenBlock)), elseBlock(nullptr) {}
+NodeIf::NodeIf(NodeExp* cond, Node* thenBlock) : Node(NodeType::IF),
+	cond(cond), thenBlock(thenBlock), elseBlock(nullptr) {}
+
+void NodeIf::markChildren() {
+	cond->mark();
+	thenBlock->mark();
+	if(elseBlock)
+		elseBlock->mark();
+}
 
 std::string NodeIf::getDataDesc(std::string prefix) {
 	if(elseBlock)
@@ -137,17 +176,29 @@ std::string NodeIf::getDataDesc(std::string prefix) {
 		return " " + cond->toString(prefix) + ": " + thenBlock->toString(prefix);
 }
 
-NodeWhile::NodeWhile(std::unique_ptr<Node> cond, std::unique_ptr<Node> block) : Node(NodeType::WHILE),
-	cond(std::move(cond)), block(std::move(block)) {}
+NodeWhile::NodeWhile(NodeExp* cond, Node* block) : Node(NodeType::WHILE),
+	cond(cond), block(block) {}
+
+void NodeWhile::markChildren() { cond->mark(); block->mark(); }
 
 std::string NodeWhile::getDataDesc(std::string prefix) { return " " + cond->toString(prefix) + ": " + block->toString(prefix); }
 
-NodeReturn::NodeReturn(std::unique_ptr<Node> expr) : Node(NodeType::RETURN), expr(std::move(expr)) {}
+NodeReturn::NodeReturn(NodeExp* exp) : Node(NodeType::RETURN), exp(exp) {}
 
-std::string NodeReturn::getDataDesc(std::string prefix) { return " " + expr->toString(prefix); }
+void NodeReturn::markChildren() { exp->mark(); }
 
-NodeFunction::NodeFunction(std::vector<std::string> argNames, std::vector<std::unique_ptr<Node>> argTypes, std::unique_ptr<Node> block)
-	: Node(NodeType::FUNC), argNames(argNames), argTypes(std::move(argTypes)), block(std::move(block)) {}
+std::string NodeReturn::getDataDesc(std::string prefix) { return " " + exp->toString(prefix); }
+
+NodeFunction::NodeFunction(std::vector<std::string> argNames, std::vector<Node*> argTypes, Node* block)
+	: NodeExp(NodeType::FUNC), argNames(argNames), argTypes(argTypes), block(block), protoIdx(-1) {}
+
+void NodeFunction::markChildren() {
+	NodeExp::markChildren();
+	for(Node* arg : argTypes) {
+		arg->mark();
+	}
+	block->mark();
+}
 
 std::string NodeFunction::getDataDesc(std::string prefix) {
 	std::string res = "(";
@@ -159,8 +210,14 @@ std::string NodeFunction::getDataDesc(std::string prefix) {
 	return res + "): " + block->toString(prefix);
 }
 
-NodeBlock::NodeBlock(std::vector<std::unique_ptr<Node>> statements)
-	: Node(NodeType::BLOCK), statements(std::move(statements)) {}
+NodeBlock::NodeBlock(std::vector<Node*> statements)
+	: Node(NodeType::BLOCK), statements(statements) {}
+
+void NodeBlock::markChildren() {
+	for(Node* stat : statements) {
+		stat->mark();
+	}
+}
 
 std::string NodeBlock::getDataDesc(std::string prefix) {
 	std::string desc;
@@ -171,21 +228,33 @@ std::string NodeBlock::getDataDesc(std::string prefix) {
 	return ":\n" + desc + prefix;
 }
 
-NodeList::NodeList(std::vector<std::unique_ptr<Node>> val)
-	: Node(NodeType::LIST), val(std::move(val)) {}
+NodeList::NodeList(std::vector<NodeExp*> vals)
+	: NodeExp(NodeType::LIST), vals(vals) {}
+
+void NodeList::markChildren() {
+	NodeExp::markChildren();
+	for(Node* val : vals) {
+		val->mark();
+	}
+}
 
 std::string NodeList::getDataDesc(std::string prefix) {
 	std::string res = " [";
-	for(uint32_t i = 0; i < val.size(); i++) {
-		res += val[i]->toString();
-		if(i != val.size()-1)
+	for(uint32_t i = 0; i < vals.size(); i++) {
+		res += vals[i]->toString();
+		if(i != vals.size()-1)
 			res += ", ";
 	}
 	return res + "]";
 }
 
-NodeProp::NodeProp(std::unique_ptr<Node> val, std::string prop)
-	: Node(NodeType::PROP), val(std::move(val)), prop(prop) {}
+NodeProp::NodeProp(NodeExp* val, std::string prop)
+	: NodeExp(NodeType::PROP), val(val), prop(prop) {}
+
+void NodeProp::markChildren() {
+	NodeExp::markChildren();
+	val->mark();
+}
 
 std::string NodeProp::getDataDesc(std::string prefix) { return " " + prefix + " of " + val->toString(prefix); }
 

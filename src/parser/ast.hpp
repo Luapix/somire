@@ -8,6 +8,9 @@
 #include <memory>
 #include <vector>
 
+#include "util/gc.hpp"
+#include "compiler/types.hpp"
+
 class ParseError : public std::runtime_error {
 public:
 	ParseError(const std::string& what);
@@ -29,9 +32,9 @@ enum class NodeType {
 
 std::string nodeTypeDesc(NodeType type);
 
-class Node {
+class Node : public GC::GCObject {
 public:
-	const NodeType type;
+	NodeType type;
 	
 	Node(NodeType type);
 	virtual ~Node() = default;
@@ -46,94 +49,109 @@ class NodeIndent : public Node {
 public:
 	NodeIndent(std::string oldIndent);
 	
-	const std::string oldIndent;
+	std::string oldIndent;
 };
 
 class NodeDedent : public Node {
 public:
 	NodeDedent(std::string newIndent);
 	
-	const std::string newIndent;
+	std::string newIndent;
 };
 
-class NodeId : public Node {
+class NodeExp : public Node {
+public:
+	NodeExp(NodeType type);
+	
+	Type* valueType;
+	
+	void markChildren() override;
+};
+
+class NodeId : public NodeExp {
 public:
 	NodeId(std::string val);
 	
-	const std::string val;
+	std::string val;
 	
 protected:
 	std::string getDataDesc(std::string prefix) override;
 };
 
-class NodeInt : public Node {
+class NodeInt : public NodeExp {
 public:
 	NodeInt(std::int32_t val);
 	
-	const std::int32_t val;
+	std::int32_t val;
 	
 protected:
 	std::string getDataDesc(std::string prefix) override;
 };
 
-class NodeReal : public Node {
+class NodeReal : public NodeExp {
 public:
 	NodeReal(double val);
 	
-	const double val;
+	double val;
 	
 protected:
 	std::string getDataDesc(std::string prefix) override;
 };
 
-class NodeString : public Node {
+class NodeString : public NodeExp {
 public:
 	NodeString(std::string val);
 	
-	const std::string val;
+	std::string val;
 	
 protected:
 	std::string getDataDesc(std::string prefix) override;
 };
 
-class NodeSymbol : public Node {
+class NodeSymbol : public NodeExp {
 public:
 	NodeSymbol(std::string val);
 	
-	const std::string val;
+	std::string val;
 	
 protected:
 	std::string getDataDesc(std::string prefix) override;
 };
 
-class NodeUnary : public Node {
+class NodeUnary : public NodeExp {
 public:
-	NodeUnary(std::string op, std::unique_ptr<Node> val);
+	NodeUnary(std::string op, NodeExp* val);
 	
-	const std::string op;
-	const std::unique_ptr<Node> val;
+	std::string op;
+	NodeExp* val;
+	
+	void markChildren() override;
 	
 protected:
 	std::string getDataDesc(std::string prefix) override;
 };
 
-class NodeBinary : public Node {
+class NodeBinary : public NodeExp {
 public:
-	NodeBinary(std::string op, std::unique_ptr<Node> left, std::unique_ptr<Node> right);
+	NodeBinary(std::string op, NodeExp* left, NodeExp* right);
 	
-	const std::string op;
-	const std::unique_ptr<Node> left, right;
+	std::string op;
+	NodeExp *left, *right;
+	
+	void markChildren() override;
 	
 protected:
 	std::string getDataDesc(std::string prefix) override;
 };
 
-class NodeCall : public Node {
+class NodeCall : public NodeExp {
 public:
-	NodeCall(std::unique_ptr<Node> func, std::vector<std::unique_ptr<Node>> args);
+	NodeCall(NodeExp* func, std::vector<NodeExp*> args);
 	
-	const std::unique_ptr<Node> func;
-	const std::vector<std::unique_ptr<Node>> args;
+	NodeExp* func;
+	std::vector<NodeExp*> args;
+	
+	void markChildren() override;
 	
 protected:
 	std::string getDataDesc(std::string prefix) override;
@@ -141,10 +159,12 @@ protected:
 
 class NodeLet : public Node {
 public:
-	NodeLet(std::string id, std::unique_ptr<Node> exp);
+	NodeLet(std::string id, NodeExp* exp);
 	
-	const std::string id;
-	const std::unique_ptr<Node> exp;
+	std::string id;
+	NodeExp* exp;
+	
+	void markChildren() override;
 	
 protected:
 	std::string getDataDesc(std::string prefix) override;
@@ -152,10 +172,12 @@ protected:
 
 class NodeSet : public Node {
 public:
-	NodeSet(std::string id, std::unique_ptr<Node> exp);
+	NodeSet(std::string id, NodeExp* exp);
 	
-	const std::string id;
-	const std::unique_ptr<Node> exp;
+	std::string id;
+	NodeExp* exp;
+	
+	void markChildren() override;
 	
 protected:
 	std::string getDataDesc(std::string prefix) override;
@@ -163,9 +185,11 @@ protected:
 
 class NodeExprStat : public Node {
 public:
-	NodeExprStat(std::unique_ptr<Node> exp);
+	NodeExprStat(NodeExp* exp);
 	
-	const std::unique_ptr<Node> exp;
+	NodeExp* exp;
+	
+	void markChildren() override;
 	
 protected:
 	std::string getDataDesc(std::string prefix) override;
@@ -173,11 +197,12 @@ protected:
 
 class NodeIf : public Node {
 public:
-	NodeIf(std::unique_ptr<Node> cond, std::unique_ptr<Node> thenBlock);
+	NodeIf(NodeExp* cond, Node* thenBlock);
 	
-	const std::unique_ptr<Node> cond;
-	const std::unique_ptr<Node> thenBlock;
-	std::unique_ptr<Node> elseBlock;
+	NodeExp* cond;
+	Node *thenBlock, *elseBlock;
+	
+	void markChildren() override;
 	
 protected:
 	std::string getDataDesc(std::string prefix) override;
@@ -185,10 +210,12 @@ protected:
 
 class NodeWhile : public Node {
 public:
-	NodeWhile(std::unique_ptr<Node> cond, std::unique_ptr<Node> block);
+	NodeWhile(NodeExp* cond, Node* block);
 	
-	const std::unique_ptr<Node> cond;
-	const std::unique_ptr<Node> block;
+	NodeExp* cond;
+	Node* block;
+	
+	void markChildren() override;
 	
 protected:
 	std::string getDataDesc(std::string prefix) override;
@@ -196,21 +223,28 @@ protected:
 
 class NodeReturn : public Node {
 public:
-	NodeReturn(std::unique_ptr<Node> expr);
+	NodeReturn(NodeExp* exp);
 	
-	const std::unique_ptr<Node> expr;
+	NodeExp* exp;
+	
+	void markChildren() override;
 	
 protected:
 	std::string getDataDesc(std::string prefix) override;	
 };
 
-class NodeFunction : public Node {
+class NodeFunction : public NodeExp {
 public:
-	NodeFunction(std::vector<std::string> argNames, std::vector<std::unique_ptr<Node>> argTypes, std::unique_ptr<Node> block);
+	NodeFunction(std::vector<std::string> argNames, std::vector<Node*> argTypes, Node* block);
 	
-	const std::vector<std::string> argNames;
-	const std::vector<std::unique_ptr<Node>> argTypes;
-	const std::unique_ptr<Node> block;
+	std::vector<std::string> argNames;
+	std::vector<Node*> argTypes;
+	Node* block;
+	
+	int32_t protoIdx;
+	std::vector<int16_t> upvalues;
+	
+	void markChildren() override;
 	
 protected:
 	std::string getDataDesc(std::string prefix) override;
@@ -218,30 +252,36 @@ protected:
 
 class NodeBlock : public Node {
 public:
-	NodeBlock(std::vector<std::unique_ptr<Node>> statements);
+	NodeBlock(std::vector<Node*> statements);
 	
-	const std::vector<std::unique_ptr<Node>> statements;
+	std::vector<Node*> statements;
 	
-protected:
-	std::string getDataDesc(std::string prefix) override;
-};
-
-class NodeList : public Node {
-public:
-	NodeList(std::vector<std::unique_ptr<Node>> val);
-	
-	const std::vector<std::unique_ptr<Node>> val;
+	void markChildren() override;
 	
 protected:
 	std::string getDataDesc(std::string prefix) override;
 };
 
-class NodeProp : public Node {
+class NodeList : public NodeExp {
 public:
-	NodeProp(std::unique_ptr<Node> val, std::string prop);
+	NodeList(std::vector<NodeExp*> vals);
 	
-	const std::unique_ptr<Node> val;
-	const std::string prop;
+	std::vector<NodeExp*> vals;
+	
+	void markChildren() override;
+	
+protected:
+	std::string getDataDesc(std::string prefix) override;
+};
+
+class NodeProp : public NodeExp {
+public:
+	NodeProp(NodeExp* val, std::string prop);
+	
+	NodeExp* val;
+	std::string prop;
+	
+	void markChildren() override;
 
 protected:
 	std::string getDataDesc(std::string prefix) override;
@@ -251,7 +291,7 @@ class NodeSimpleType : public Node {
 public:
 	NodeSimpleType(std::string name);
 	
-	const std::string name;
+	std::string name;
 	
 protected:
 	std::string getDataDesc(std::string prefix) override;

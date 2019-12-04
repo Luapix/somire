@@ -20,8 +20,8 @@ template<typename C>
 }
 
 template<typename C>
-std::unique_ptr<Node> Parser<C>::nextToken() {
-	std::unique_ptr<Node> token = lexer.lexToken(); // Get new token
+GC::Root<Node> Parser<C>::nextToken() {
+	GC::Root<Node> token = lexer.lexToken(); // Get new token
 	curToken.swap(peekToken);
 	peekToken.swap(token);
 	return token; // Return old token
@@ -29,7 +29,7 @@ std::unique_ptr<Node> Parser<C>::nextToken() {
 
 template<typename C>
 void Parser<C>::discardToken(NodeType type) {
-	std::unique_ptr<Node> token = nextToken();
+	GC::Root<Node> token = nextToken();
 	if(token->type != type)
 		error("Expected " + nodeTypeDesc(type) + ", got " + token->toString());
 }
@@ -77,29 +77,29 @@ int Parser<C>::getInfixPrecedence() {
 }
 
 template<typename C>
-std::unique_ptr<Node> Parser<C>::parseType() {
+GC::Root<Node> Parser<C>::parseType() {
 	if(curToken->type != NodeType::ID)
 		error("Expected identifier in type constraint, got " + nodeTypeDesc(curToken->type));
-	std::unique_ptr<Node> idToken = nextToken();
-	return std::unique_ptr<Node>(new NodeSimpleType(static_cast<NodeId*>(idToken.get())->val));
+	GC::Root<Node> idToken = nextToken();
+	return GC::Root<Node>(new NodeSimpleType(static_cast<NodeId*>(idToken.get())->val));
 }
 
 template<typename C>
-std::unique_ptr<Node> Parser<C>::parseFunction() {
+GC::Root<NodeExp> Parser<C>::parseFunction() {
 	discardSymbol("(");
 	std::vector<std::string> argNames;
-	std::vector<std::unique_ptr<Node>> argTypes;
+	auto argTypes = GC::makeRootVector<Node>();
 	if(!isCurSymbol(")")) {
 		while(true) {
 			if(curToken->type != NodeType::ID)
 				error("Expected identifier in argument list, got " + nodeTypeDesc(curToken->type));
-			std::unique_ptr<Node> argToken = nextToken();
+			GC::Root<Node> argToken = nextToken();
 			argNames.push_back(static_cast<NodeId*>(argToken.get())->val);
 			if(isCurSymbol(":")) {
 				nextToken();
-				argTypes.push_back(parseType());
+				argTypes->vec.push_back(parseType().release());
 			} else {
-				argTypes.emplace_back(new NodeSimpleType("any"));
+				argTypes->vec.push_back(new NodeSimpleType("any"));
 			}
 			if(isCurSymbol(")")) {
 				break;
@@ -109,29 +109,29 @@ std::unique_ptr<Node> Parser<C>::parseFunction() {
 	}
 	nextToken();
 	discardSymbol(":");
-	return std::unique_ptr<Node>(new NodeFunction(argNames, std::move(argTypes), parseIndentedBlock()));
+	return GC::Root<NodeExp>(new NodeFunction(argNames, argTypes->vec, parseIndentedBlock().release()));
 }
 
 template<typename C>
-std::unique_ptr<Node> Parser<C>::parseExpr(int prec) {
-	std::unique_ptr<Node> exp;
+GC::Root<NodeExp> Parser<C>::parseExpr(int prec) {
+	GC::Root<NodeExp> exp;
 	if(terminals.find(curToken->type) != terminals.end()) {
-		exp = nextToken();
+		exp.reset(static_cast<NodeExp*>(nextToken().release()));
 	} else if(curToken->type == NodeType::SYM) {
-		std::unique_ptr<NodeSymbol> symbol(static_cast<NodeSymbol*>(nextToken().release()));
+		GC::Root<NodeSymbol> symbol(static_cast<NodeSymbol*>(nextToken().release()));
 		if(terminalSymbols.find(symbol->val) != terminalSymbols.end()) {
-			exp = std::move(symbol);
+			exp.reset(symbol.release());
 		} else if(prefixOperators.find(symbol->val) != prefixOperators.end()) {
 			int prec2 = operatorPrecedence[symbol->val];
-			exp = std::unique_ptr<Node>(new NodeUnary(symbol->val, parseExpr(prec2)));
+			exp.reset(new NodeUnary(symbol->val, parseExpr(prec2).release()));
 		} else if(symbol->val == "(") {
 			exp = parseExpr(0);
 			discardSymbol(")");
 		} else if(symbol->val == "[") {
-			std::vector<std::unique_ptr<Node>> vals;
+			auto vals = GC::makeRootVector<NodeExp>();
 			if(!isCurSymbol("]")) {
 				while(true) {
-					vals.push_back(parseExpr(0));
+					vals->vec.push_back(parseExpr(0).release());
 					if(isCurSymbol("]"))
 						break;
 					else
@@ -139,7 +139,7 @@ std::unique_ptr<Node> Parser<C>::parseExpr(int prec) {
 				}
 			}
 			nextToken();
-			exp = std::unique_ptr<Node>(new NodeList(std::move(vals)));
+			exp.reset(new NodeList(vals->vec));
 		} else {
 			error("Unexpected symbol at start of expression: " + symbol->val);
 		}
@@ -148,13 +148,13 @@ std::unique_ptr<Node> Parser<C>::parseExpr(int prec) {
 	}
 	
 	while(getInfixPrecedence() > prec) {
-		std::unique_ptr<NodeSymbol> symbol(static_cast<NodeSymbol*>(nextToken().release()));
+		GC::Root<NodeSymbol> symbol(static_cast<NodeSymbol*>(nextToken().release()));
 		if(infixOperators.find(symbol->val) != infixOperators.end()) {
 			if(symbol->val == "(") {
-				std::vector<std::unique_ptr<Node>> args;
+				auto args = GC::makeRootVector<NodeExp>();
 				if(!isCurSymbol(")")) {
 					while(true) {
-						args.push_back(parseExpr(0));
+						args->vec.push_back(parseExpr(0).release());
 						if(isCurSymbol(")"))
 							break;
 						else
@@ -162,20 +162,20 @@ std::unique_ptr<Node> Parser<C>::parseExpr(int prec) {
 					}
 				}
 				nextToken();
-				exp = std::unique_ptr<Node>(new NodeCall(std::move(exp), std::move(args)));
+				exp.reset(new NodeCall(exp.release(), args->vec));
 			} else if(symbol->val == "[") {
-				exp = std::unique_ptr<Node>(new NodeBinary("index", std::move(exp), parseExpr(0)));
+				exp.reset(new NodeBinary("index", exp.release(), parseExpr(0).release()));
 				discardSymbol("]");
 			} else if(symbol->val == ".") {
 				if(curToken->type != NodeType::ID)
 					error("Expected id after '.', got " + curToken->toString());
-				std::unique_ptr<NodeId> prop(static_cast<NodeId*>(nextToken().release()));
-				exp = std::unique_ptr<Node>(new NodeProp(std::move(exp), prop->val));
+				GC::Root<NodeId> prop(static_cast<NodeId*>(nextToken().release()));
+				exp.reset(new NodeProp(exp.release(), prop->val));
 			} else {
 				int prec2 = operatorPrecedence[symbol->val];
 				if(rightAssociativeOperators.find(symbol->val) != rightAssociativeOperators.end())
 					prec2--;
-				exp = std::unique_ptr<Node>(new NodeBinary(symbol->val, std::move(exp), parseExpr(prec2)));
+				exp.reset(new NodeBinary(symbol->val, exp.release(), parseExpr(prec2).release()));
 			}
 		} else {
 			error("Unimplemented infix/postfix operator: " + symbol->val);
@@ -186,8 +186,8 @@ std::unique_ptr<Node> Parser<C>::parseExpr(int prec) {
 }
 
 template<typename C>
-std::unique_ptr<Node> Parser<C>::parseMultilineExpr() {
-	std::unique_ptr<Node> exp;
+GC::Root<NodeExp> Parser<C>::parseMultilineExpr() {
+	GC::Root<NodeExp> exp;
 	if(isCurSymbol("fun")) {
 		nextToken();
 		exp = parseFunction();
@@ -205,83 +205,83 @@ void Parser<C>::finishStatement() {
 }
 
 template<typename C>
-std::unique_ptr<Node> Parser<C>::parseIfStatement() {
+GC::Root<Node> Parser<C>::parseIfStatement() {
 	nextToken();
-	std::unique_ptr<Node> cond = parseExpr();
+	GC::Root<NodeExp> cond = parseExpr();
 	discardSymbol(":");
-	std::unique_ptr<NodeIf> node(new NodeIf(std::move(cond), parseIndentedBlock()));
+	GC::Root<NodeIf> node(new NodeIf(cond.release(), parseIndentedBlock().release()));
 	if(isCurSymbol("else")) {
 		nextToken();
 		if(isCurSymbol("if")) {
-			std::vector<std::unique_ptr<Node>> statements;
-			statements.push_back(parseIfStatement());
-			node->elseBlock = std::unique_ptr<Node>(new NodeBlock(std::move(statements)));
+			auto statements = GC::makeRootVector<Node>();
+			statements->vec.push_back(parseIfStatement().release());
+			node->elseBlock = new NodeBlock(statements->vec);
 		} else {
 			discardSymbol(":");
-			node->elseBlock = parseIndentedBlock();
+			node->elseBlock = parseIndentedBlock().release();
 		}
 	}
-	return node;
+	return GC::Root<Node>(node.release());
 }
 
 template<typename C>
-std::unique_ptr<Node> Parser<C>::parseStatement() {
+GC::Root<Node> Parser<C>::parseStatement() {
 	if(isCurSymbol("let")) {
 		nextToken();
-		std::unique_ptr<Node> idToken = nextToken();
+		GC::Root<Node> idToken = nextToken();
 		if(idToken->type != NodeType::ID)
 			error("Expected identifier after 'let', got " + nodeTypeDesc(idToken->type));
 		std::string id = static_cast<NodeId*>(idToken.get())->val;
-		std::unique_ptr<Node> expr;
+		GC::Root<NodeExp> expr;
 		if(isCurSymbol("(")) {
 			expr = parseFunction();
 		} else {
 			discardSymbol("=");
 			expr = parseMultilineExpr();
 		}
-		return std::unique_ptr<Node>(new NodeLet(id, std::move(expr)));
+		return GC::Root<Node>(new NodeLet(id, expr.release()));
 	} else if(curToken->type == NodeType::ID && peekToken->type == NodeType::SYM && static_cast<NodeSymbol&>(*peekToken).val == "=") {
-		std::unique_ptr<Node> idToken = nextToken();
+		GC::Root<Node> idToken = nextToken();
 		std::string id = static_cast<NodeId*>(idToken.get())->val;
 		nextToken();
-		std::unique_ptr<Node> expr = parseMultilineExpr();
-		return std::unique_ptr<Node>(new NodeSet(id, std::move(expr)));
+		GC::Root<NodeExp> expr = parseMultilineExpr();
+		return GC::Root<Node>(new NodeSet(id, expr.release()));
 	} else if(isCurSymbol("if")) {
 		return parseIfStatement();
 	} else if(isCurSymbol("while")) {
 		nextToken();
-		std::unique_ptr<Node> cond = parseExpr();
+		GC::Root<NodeExp> cond = parseExpr();
 		if(!isCurSymbol(":"))
 			error("Expected ':' after 'while', got " + curToken->toString());
 		nextToken();
-		std::unique_ptr<Node> block = parseIndentedBlock();
-		return std::unique_ptr<Node>(new NodeWhile(std::move(cond), std::move(block)));
+		GC::Root<Node> block = parseIndentedBlock();
+		return GC::Root<Node>(new NodeWhile(cond.release(), block.release()));
 	} else if(isCurSymbol("return")) {
 		nextToken();
-		std::unique_ptr<Node> expr = parseMultilineExpr();
-		return std::unique_ptr<Node>(new NodeReturn(std::move(expr)));
+		GC::Root<NodeExp> expr = parseMultilineExpr();
+		return GC::Root<Node>(new NodeReturn(expr.release()));
 	} else {
-		std::unique_ptr<Node> expr = parseMultilineExpr();
-		return std::unique_ptr<Node>(new NodeExprStat(std::move(expr)));
+		GC::Root<NodeExp> expr = parseMultilineExpr();
+		return GC::Root<Node>(new NodeExprStat(expr.release()));
 	}
 }
 
 template<typename C>
-std::unique_ptr<Node> Parser<C>::parseBlock() {
-	std::vector<std::unique_ptr<Node>> statements;
+GC::Root<Node> Parser<C>::parseBlock() {
+	auto statements = GC::makeRootVector<Node>();
 	while(curToken->type != NodeType::DEDENT && curToken->type != NodeType::EOI) {
-		statements.push_back(parseStatement());
+		statements->vec.push_back(parseStatement().release());
 	}
-	return std::unique_ptr<NodeBlock>(new NodeBlock(std::move(statements)));
+	return GC::Root<Node>(new NodeBlock(statements->vec));
 }
 
 template<typename C>
-std::unique_ptr<Node> Parser<C>::parseIndentedBlock() {
+GC::Root<Node> Parser<C>::parseIndentedBlock() {
 	if(curToken->type != NodeType::INDENT)
 		error("Expected indent, got " + curToken->toString());
 	std::string oldIndent = static_cast<NodeIndent&>(*curToken).oldIndent;
 	nextToken();
-	std::unique_ptr<Node> block = parseBlock();
+	GC::Root<Node> block = parseBlock();
 	if(curToken->type == NodeType::DEDENT) {
 		std::string newIndent = static_cast<NodeDedent&>(*curToken).newIndent;
 		if(newIndent == oldIndent) {
@@ -295,9 +295,9 @@ std::unique_ptr<Node> Parser<C>::parseIndentedBlock() {
 }
 
 template<typename C>
-std::unique_ptr<Node> Parser<C>::parseProgram() {
+GC::Root<Node> Parser<C>::parseProgram() {
 	discardToken(NodeType::NL);
-	std::unique_ptr<Node> program = parseBlock();
+	GC::Root<Node> program = parseBlock();
 	discardToken(NodeType::EOI);
 	return program;
 }

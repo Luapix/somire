@@ -3,6 +3,7 @@
 #include <string>
 #include <memory>
 
+#include "util/gc.hpp"
 #include "util/uni_data.hpp"
 #include "ast.hpp"
 
@@ -15,7 +16,7 @@ public:
 	
 	void error(std::string cause, bool parseError = false);
 	
-	std::unique_ptr<Node> lexToken();
+	GC::Root<Node> lexToken();
 	
 private:
 	C curByte;
@@ -31,11 +32,11 @@ private:
 	void nextChar();
 	void skipSpace(bool skipSpace = false);
 	
-	std::unique_ptr<Node> lexNewline();
-	std::unique_ptr<Node> lexId();
-	std::unique_ptr<Node> lexNumber();
-	std::unique_ptr<Node> lexString();
-	std::unique_ptr<Node> lexSymbol();
+	GC::Root<Node> lexNewline();
+	GC::Root<Node> lexId();
+	GC::Root<Node> lexNumber();
+	GC::Root<Node> lexString();
+	GC::Root<Node> lexSymbol();
 };
 
 #include "lexer.tpp"

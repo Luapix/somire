@@ -66,7 +66,7 @@ Compiler::Compiler() : types(new TypeNamespace()), globals(new TypeNamespace()) 
 	defineStdTypes(*globals, *types);
 }
 
-std::unique_ptr<Chunk> Compiler::compileProgram(std::unique_ptr<Node> ast) {
+std::unique_ptr<Chunk> Compiler::compileProgram(Node* ast) {
 	curChunk = std::unique_ptr<Chunk>(new Chunk());
 	if(ast->type != NodeType::BLOCK)
 		throw CompileError("Expected block to compile, got " + nodeTypeDesc(ast->type));
@@ -100,7 +100,7 @@ std::vector<int16_t> Compiler::compileFunction(NodeBlock& block, std::vector<std
 }
 
 void Compiler::compileBlock(FunctionChunk& curFunc, NodeBlock& block, Context& ctx, Type** resType, bool mainBlock) {
-	for(const std::unique_ptr<Node>& stat : block.statements) {
+	for(Node* stat : block.statements) {
 		compileStatement(curFunc, *stat, ctx, resType);
 	}
 	if(!mainBlock && ctx.getLocalCount() > 0) { // pop locals
@@ -181,7 +181,7 @@ void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx
 		curFunc.fillInJump(addPos);
 		break;
 	} case NodeType::RETURN: {
-		Type* resType2 = compileExpression(curFunc, *static_cast<NodeReturn&>(stat).expr, ctx);
+		Type* resType2 = compileExpression(curFunc, *static_cast<NodeReturn&>(stat).exp, ctx);
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::RETURN);
 		if(*resType) {
 			if((*resType)->canBeAssignedTo(resType2)) {
@@ -373,7 +373,7 @@ Type* Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& c
 	} case NodeType::LIST: {
 		NodeList& expr2 = static_cast<NodeList&>(expr);
 		Type* elemType = nullptr;
-		for(const std::unique_ptr<Node>& val : expr2.val) {
+		for(Node* val : expr2.vals) {
 			Type* elemType2 = compileExpression(curFunc, *val, ctx);
 			if(elemType) {
 				if(elemType->canBeAssignedTo(elemType2)) {
@@ -386,9 +386,9 @@ Type* Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& c
 			}
 		}
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::MAKE_LIST);
-		if(expr2.val.size() > 0xffff)
+		if(expr2.vals.size() > 0xffff)
 			throw CompileError("Too many elements in list literal");
-		writeUI16(curFunc.codeOut, (uint16_t) expr2.val.size());
+		writeUI16(curFunc.codeOut, (uint16_t) expr2.vals.size());
 		return new ListType(elemType);
 	} default:
 		throw CompileError("Expression type not implemented: " + nodeTypeDesc(expr.type));

@@ -4,13 +4,14 @@
 #include <memory>
 #include <string>
 
+#include "util/gc.hpp"
 #include "parser/ast.hpp"
 #include "parser/parser.hpp"
 #include "compiler/chunk.hpp"
 #include "compiler/compiler.hpp"
 #include "vm/vm.hpp"
 
-bool parse(std::string inputPath, std::unique_ptr<Node>& program) {
+bool parse(std::string inputPath, GC::Root<Node>& program) {
 	std::ifstream inputFile(inputPath);
 	if(!inputFile) {
 		std::cout << "Could not open input file" << std::endl;
@@ -26,10 +27,10 @@ bool parse(std::string inputPath, std::unique_ptr<Node>& program) {
 	return true;
 }
 
-bool compile(std::unique_ptr<Node> program, std::unique_ptr<Chunk>& chunk) {
+bool compile(Node* program, std::unique_ptr<Chunk>& chunk) {
 	Compiler compiler;
 	try {
-		chunk = compiler.compileProgram(std::move(program));
+		chunk = compiler.compileProgram(program);
 	} catch(CompileError& e) {
 		std::cout << e.what() << std::endl;
 		return false;
@@ -61,17 +62,17 @@ bool run(std::unique_ptr<Chunk>& chunk) {
 
 bool doOperation(std::string op, std::string inputPath) {
 	if(op == "parse") {
-		std::unique_ptr<Node> program;
+		GC::Root<Node> program;
 		if(!parse(inputPath, program)) return false;
 		std::cout << program->toString() << std::endl;
 	} else if(op == "compile") {
 		std::cout << "Parsing..." << std::endl;
-		std::unique_ptr<Node> program;
+		GC::Root<Node> program;
 		if(!parse(inputPath, program)) return false;
 		
 		std::cout << "Compiling..." << std::endl;
 		std::unique_ptr<Chunk> chunk;
-		if(!compile(std::move(program), chunk)) return false;
+		if(!compile(program.get(), chunk)) return false;
 		
 		std::string outputPath = inputPath.substr(0, inputPath.rfind('.')) + ".sbf";
 		std::ofstream outputFile(outputPath, std::ios::binary);
@@ -87,11 +88,11 @@ bool doOperation(std::string op, std::string inputPath) {
 		
 		if(!run(chunk)) return false;
 	} else if(op == "interpret") {
-		std::unique_ptr<Node> program;
+		GC::Root<Node> program;
 		if(!parse(inputPath, program)) return false;
 		
 		std::unique_ptr<Chunk> chunk;
-		if(!compile(std::move(program), chunk)) return false;
+		if(!compile(program.get(), chunk)) return false;
 		
 		if(!run(chunk)) return false;
 	} else {

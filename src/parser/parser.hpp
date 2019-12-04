@@ -14,31 +14,31 @@ class Parser {
 public:
 	Parser(C start, C end);
 	
-	std::unique_ptr<Node> parseProgram();
+	GC::Root<Node> parseProgram();
 	
 private:
 	Lexer<C> lexer;
 	
-	std::unique_ptr<Node> curToken;
-	std::unique_ptr<Node> peekToken;
+	GC::Root<Node> curToken;
+	GC::Root<Node> peekToken;
 	
 	void error(std::string cause);
 	
-	std::unique_ptr<Node> nextToken();
+	GC::Root<Node> nextToken();
 	void discardToken(NodeType type);
 	void discardSymbol(std::string sym);
 	bool isCurSymbol(std::string sym);
 	
 	int getInfixPrecedence();
-	std::unique_ptr<Node> parseType();
-	std::unique_ptr<Node> parseFunction();
-	std::unique_ptr<Node> parseExpr(int prec = 0);
-	std::unique_ptr<Node> parseMultilineExpr();
+	GC::Root<Node> parseType();
+	GC::Root<NodeExp> parseFunction();
+	GC::Root<NodeExp> parseExpr(int prec = 0);
+	GC::Root<NodeExp> parseMultilineExpr();
 	void finishStatement();
-	std::unique_ptr<Node> parseIfStatement();
-	std::unique_ptr<Node> parseStatement();
-	std::unique_ptr<Node> parseBlock();
-	std::unique_ptr<Node> parseIndentedBlock();
+	GC::Root<Node> parseIfStatement();
+	GC::Root<Node> parseStatement();
+	GC::Root<Node> parseBlock();
+	GC::Root<Node> parseIndentedBlock();
 };
 
 Parser<std::istreambuf_iterator<char>> newFileParser(std::ifstream& fs);
