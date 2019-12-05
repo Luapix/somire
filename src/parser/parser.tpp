@@ -85,7 +85,7 @@ std::unique_ptr<Node> Parser<C>::parseType() {
 }
 
 template<typename C>
-std::unique_ptr<Node> Parser<C>::parseFunction() {
+std::unique_ptr<NodeExp> Parser<C>::parseFunction() {
 	discardSymbol("(");
 	std::vector<std::string> argNames;
 	std::vector<std::unique_ptr<Node>> argTypes;
@@ -109,26 +109,26 @@ std::unique_ptr<Node> Parser<C>::parseFunction() {
 	}
 	nextToken();
 	discardSymbol(":");
-	return std::unique_ptr<Node>(new NodeFunction(argNames, std::move(argTypes), parseIndentedBlock()));
+	return std::unique_ptr<NodeExp>(new NodeFunction(argNames, std::move(argTypes), parseIndentedBlock()));
 }
 
 template<typename C>
-std::unique_ptr<Node> Parser<C>::parseExpr(int prec) {
-	std::unique_ptr<Node> exp;
+std::unique_ptr<NodeExp> Parser<C>::parseExpr(int prec) {
+	std::unique_ptr<NodeExp> exp;
 	if(terminals.find(curToken->type) != terminals.end()) {
-		exp = nextToken();
+		exp.reset(static_cast<NodeExp*>(nextToken().release()));
 	} else if(curToken->type == NodeType::SYM) {
 		std::unique_ptr<NodeSymbol> symbol(static_cast<NodeSymbol*>(nextToken().release()));
 		if(terminalSymbols.find(symbol->val) != terminalSymbols.end()) {
 			exp = std::move(symbol);
 		} else if(prefixOperators.find(symbol->val) != prefixOperators.end()) {
 			int prec2 = operatorPrecedence[symbol->val];
-			exp = std::unique_ptr<Node>(new NodeUnary(symbol->val, parseExpr(prec2)));
+			exp.reset(new NodeUnary(symbol->val, parseExpr(prec2)));
 		} else if(symbol->val == "(") {
 			exp = parseExpr(0);
 			discardSymbol(")");
 		} else if(symbol->val == "[") {
-			std::vector<std::unique_ptr<Node>> vals;
+			std::vector<std::unique_ptr<NodeExp>> vals;
 			if(!isCurSymbol("]")) {
 				while(true) {
 					vals.push_back(parseExpr(0));
@@ -139,7 +139,7 @@ std::unique_ptr<Node> Parser<C>::parseExpr(int prec) {
 				}
 			}
 			nextToken();
-			exp = std::unique_ptr<Node>(new NodeList(std::move(vals)));
+			exp.reset(new NodeList(std::move(vals)));
 		} else {
 			error("Unexpected symbol at start of expression: " + symbol->val);
 		}
@@ -151,7 +151,7 @@ std::unique_ptr<Node> Parser<C>::parseExpr(int prec) {
 		std::unique_ptr<NodeSymbol> symbol(static_cast<NodeSymbol*>(nextToken().release()));
 		if(infixOperators.find(symbol->val) != infixOperators.end()) {
 			if(symbol->val == "(") {
-				std::vector<std::unique_ptr<Node>> args;
+				std::vector<std::unique_ptr<NodeExp>> args;
 				if(!isCurSymbol(")")) {
 					while(true) {
 						args.push_back(parseExpr(0));
@@ -162,20 +162,20 @@ std::unique_ptr<Node> Parser<C>::parseExpr(int prec) {
 					}
 				}
 				nextToken();
-				exp = std::unique_ptr<Node>(new NodeCall(std::move(exp), std::move(args)));
+				exp.reset(new NodeCall(std::move(exp), std::move(args)));
 			} else if(symbol->val == "[") {
-				exp = std::unique_ptr<Node>(new NodeBinary("index", std::move(exp), parseExpr(0)));
+				exp.reset(new NodeBinary("index", std::move(exp), parseExpr(0)));
 				discardSymbol("]");
 			} else if(symbol->val == ".") {
 				if(curToken->type != NodeType::ID)
 					error("Expected id after '.', got " + curToken->toString());
 				std::unique_ptr<NodeId> prop(static_cast<NodeId*>(nextToken().release()));
-				exp = std::unique_ptr<Node>(new NodeProp(std::move(exp), prop->val));
+				exp.reset(new NodeProp(std::move(exp), prop->val));
 			} else {
 				int prec2 = operatorPrecedence[symbol->val];
 				if(rightAssociativeOperators.find(symbol->val) != rightAssociativeOperators.end())
 					prec2--;
-				exp = std::unique_ptr<Node>(new NodeBinary(symbol->val, std::move(exp), parseExpr(prec2)));
+				exp.reset(new NodeBinary(symbol->val, std::move(exp), parseExpr(prec2)));
 			}
 		} else {
 			error("Unimplemented infix/postfix operator: " + symbol->val);
@@ -186,8 +186,8 @@ std::unique_ptr<Node> Parser<C>::parseExpr(int prec) {
 }
 
 template<typename C>
-std::unique_ptr<Node> Parser<C>::parseMultilineExpr() {
-	std::unique_ptr<Node> exp;
+std::unique_ptr<NodeExp> Parser<C>::parseMultilineExpr() {
+	std::unique_ptr<NodeExp> exp;
 	if(isCurSymbol("fun")) {
 		nextToken();
 		exp = parseFunction();
@@ -207,7 +207,7 @@ void Parser<C>::finishStatement() {
 template<typename C>
 std::unique_ptr<Node> Parser<C>::parseIfStatement() {
 	nextToken();
-	std::unique_ptr<Node> cond = parseExpr();
+	std::unique_ptr<NodeExp> cond = parseExpr();
 	discardSymbol(":");
 	std::unique_ptr<NodeIf> node(new NodeIf(std::move(cond), parseIndentedBlock()));
 	if(isCurSymbol("else")) {
@@ -232,7 +232,7 @@ std::unique_ptr<Node> Parser<C>::parseStatement() {
 		if(idToken->type != NodeType::ID)
 			error("Expected identifier after 'let', got " + nodeTypeDesc(idToken->type));
 		std::string id = static_cast<NodeId*>(idToken.get())->val;
-		std::unique_ptr<Node> expr;
+		std::unique_ptr<NodeExp> expr;
 		if(isCurSymbol("(")) {
 			expr = parseFunction();
 		} else {
@@ -244,13 +244,13 @@ std::unique_ptr<Node> Parser<C>::parseStatement() {
 		std::unique_ptr<Node> idToken = nextToken();
 		std::string id = static_cast<NodeId*>(idToken.get())->val;
 		nextToken();
-		std::unique_ptr<Node> expr = parseMultilineExpr();
+		std::unique_ptr<NodeExp> expr = parseMultilineExpr();
 		return std::unique_ptr<Node>(new NodeSet(id, std::move(expr)));
 	} else if(isCurSymbol("if")) {
 		return parseIfStatement();
 	} else if(isCurSymbol("while")) {
 		nextToken();
-		std::unique_ptr<Node> cond = parseExpr();
+		std::unique_ptr<NodeExp> cond = parseExpr();
 		if(!isCurSymbol(":"))
 			error("Expected ':' after 'while', got " + curToken->toString());
 		nextToken();
@@ -258,10 +258,10 @@ std::unique_ptr<Node> Parser<C>::parseStatement() {
 		return std::unique_ptr<Node>(new NodeWhile(std::move(cond), std::move(block)));
 	} else if(isCurSymbol("return")) {
 		nextToken();
-		std::unique_ptr<Node> expr = parseMultilineExpr();
+		std::unique_ptr<NodeExp> expr = parseMultilineExpr();
 		return std::unique_ptr<Node>(new NodeReturn(std::move(expr)));
 	} else {
-		std::unique_ptr<Node> expr = parseMultilineExpr();
+		std::unique_ptr<NodeExp> expr = parseMultilineExpr();
 		return std::unique_ptr<Node>(new NodeExprStat(std::move(expr)));
 	}
 }

@@ -209,7 +209,7 @@ std::unordered_map<std::string, Opcode> binaryOps = {
 	{"index", Opcode::INDEX}
 };
 
-Type* Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& ctx) {
+Type* Compiler::compileExpression(FunctionChunk& curFunc, NodeExp& expr, Context& ctx) {
 	switch(expr.type) {
 	case NodeType::INT:
 		compileConstant(curFunc, Value(static_cast<NodeInt&>(expr).val));
@@ -373,7 +373,7 @@ Type* Compiler::compileExpression(FunctionChunk& curFunc, Node& expr, Context& c
 	} case NodeType::LIST: {
 		NodeList& expr2 = static_cast<NodeList&>(expr);
 		Type* elemType = nullptr;
-		for(const std::unique_ptr<Node>& val : expr2.val) {
+		for(const std::unique_ptr<NodeExp>& val : expr2.val) {
 			Type* elemType2 = compileExpression(curFunc, *val, ctx);
 			if(elemType) {
 				if(elemType->canBeAssignedTo(elemType2)) {

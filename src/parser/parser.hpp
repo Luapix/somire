@@ -31,9 +31,9 @@ private:
 	
 	int getInfixPrecedence();
 	std::unique_ptr<Node> parseType();
-	std::unique_ptr<Node> parseFunction();
-	std::unique_ptr<Node> parseExpr(int prec = 0);
-	std::unique_ptr<Node> parseMultilineExpr();
+	std::unique_ptr<NodeExp> parseFunction();
+	std::unique_ptr<NodeExp> parseExpr(int prec = 0);
+	std::unique_ptr<NodeExp> parseMultilineExpr();
 	void finishStatement();
 	std::unique_ptr<Node> parseIfStatement();
 	std::unique_ptr<Node> parseStatement();
