@@ -222,6 +222,9 @@ public:
 	const std::vector<std::unique_ptr<Node>> argTypes;
 	const std::unique_ptr<Node> block;
 	
+	int32_t protoIdx;
+	std::vector<int16_t> upvalues;
+	
 protected:
 	std::string getDataDesc(std::string prefix) override;
 };
