@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <functional>
 
-#include "gc.hpp"
+#include "util/gc.hpp"
 
 class ExecutionError : public std::runtime_error {
 public:

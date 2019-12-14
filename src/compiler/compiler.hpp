@@ -8,6 +8,7 @@
 #include "parser/ast.hpp"
 #include "chunk.hpp"
 #include "types.hpp"
+#include "vm/std.hpp"
 
 
 struct Variable {
@@ -21,6 +22,7 @@ public:
 	
 	std::optional<Variable> getVariable(std::string varName);
 	void defineLocal(std::string var, Type* type);
+	void changeType(std::string var, Type* type);
 	uint16_t getLocalCount();
 	
 	std::vector<int16_t>& getFunctionUpvalues();
@@ -45,9 +47,16 @@ public:
 private:
 	std::unique_ptr<Chunk> curChunk;
 	
-	std::vector<int16_t> compileFunction(NodeBlock& block, std::vector<std::string> argNames, Context* parent = nullptr);
-	void compileBlock(FunctionChunk& curFunc, NodeBlock& block, Context& ctx, bool popLocals = true);
-	void compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx);
-	Type* compileExpression(FunctionChunk& curFunc, Node& expr, Context& ctx);
+	GC::Root<TypeNamespace> types;
+	Type *anyType, *nilType, *boolType, *realType, *intType, *stringType, *macroType;
+	
+	GC::Root<TypeNamespace> globals;
+	
+	Type* getType(Node& type);
+	std::vector<int16_t> compileFunction(NodeBlock& block, std::vector<std::string> argNames, std::vector<Type*> argTypes, Type* resType, Context* parent = nullptr);
+	bool compileBlock(FunctionChunk& curFunc, NodeBlock& block, Context& ctx, Type* resType, bool mainBlock = false);
+	bool compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx, Type* resType);
+	Type* typeExpression(NodeExp& exp, Context& ctx);
+	void compileExpression(FunctionChunk& curFunc, NodeExp& expr, Context& ctx);
 	void compileConstant(FunctionChunk& curFunc, Value val);
 };

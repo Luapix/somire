@@ -22,29 +22,38 @@ namespace GC {
 	class GCObject {
 	public:
 		GCObject();
-		GCObject(GCObject const&);
+		GCObject(GCObject const&) = delete;
 		virtual ~GCObject();
 		
 		void mark();
 		void reset();
 		bool isMarked();
+	
+	protected:
+		virtual void markChildren();
 		
 	private:
 		bool _marked;
-		
-		virtual void markChildren();
 	};
 	
 	template<typename T>
 	class Root {
 	public:
+		Root();
 		Root(T* obj);
+		Root(Root<T>&&);
 		~Root();
 		
 		T* get();
+		T* release();
+		void reset(T* obj2);
 		
 		T& operator*();
 		T* operator->();
+		
+		Root<T>& operator=(Root<T>&&);
+		
+		void swap(Root<T>& other);
 		
 	private:
 		T* obj;

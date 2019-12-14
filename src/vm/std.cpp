@@ -32,26 +32,22 @@ Value log(std::vector<Value>& args) {
 }
 
 Value repr(std::vector<Value>& args) {
-	checkNumber(args, 1);
 	return Value(new String(args[0].toString()));
 }
 
 Value write(std::vector<Value>& args) {
-	checkNumber(args, 1);
-	String& s = expectObject<String>(args[0], 0, "string");
+	String& s = *args[0].get<String>();
 	std::cout << s.str;
 	return Value::nil();
 }
 
 Value writeLine(std::vector<Value>& args) {
-	checkNumber(args, 1);
-	String& s = expectObject<String>(args[0], 0, "string");
+	String& s = *args[0].get<String>();
 	std::cout << s.str << std::endl;
 	return Value::nil();
 }
 
 Value listNew(std::vector<Value>& args) {
-	checkNumber(args, 0);
 	return Value(new List());
 }
 
@@ -74,9 +70,14 @@ Value listAdd(std::vector<Value>& args) {
 }
 
 Value listSize(std::vector<Value>& args) {
-	checkNumber(args, 1);
-	List& list = expectObject<List>(args[0], 0, "list");
+	List& list = *args[0].get<List>();
 	return Value((int32_t) list.vec.size());
+}
+
+Value toBool(std::vector<Value>& args) {
+	if(!args[0].isBool())
+		throw ExecutionError("Cannot convert " + args[0].toString() + " to bool");
+	return args[0];
 }
 
 void loadStd(Namespace& ns) {
@@ -87,4 +88,16 @@ void loadStd(Namespace& ns) {
 	ns.map["listNew"] = Value(new CFunction(listNew));
 	ns.map["listAdd"] = Value(new CFunction(listAdd));
 	ns.map["listSize"] = Value(new CFunction(listSize));
+	ns.map["bool"] = Value(new CFunction(toBool));
+}
+
+void defineStdTypes(TypeNamespace& ns, TypeNamespace& types) {
+	ns.map["log"] = types.map["macro"];
+	ns.map["repr"] = new FunctionType({types.map["any"]}, types.map["string"]);
+	ns.map["write"] = new FunctionType({types.map["string"]}, types.map["nil"]);
+	ns.map["writeLine"] = new FunctionType({types.map["string"]}, types.map["nil"]);
+	ns.map["listNew"] = new FunctionType({}, new ListType(nullptr));
+	ns.map["listAdd"] = types.map["macro"];
+	ns.map["listSize"] = new FunctionType({new ListType(types.map["any"])}, types.map["int"]);
+	ns.map["bool"] = new FunctionType({types.map["any"]}, types.map["bool"]);
 }
