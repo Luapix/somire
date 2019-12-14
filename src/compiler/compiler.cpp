@@ -98,23 +98,25 @@ std::vector<int16_t> Compiler::compileFunction(NodeBlock& block, std::vector<std
 	return ctx.getFunctionUpvalues();
 }
 
-void Compiler::compileBlock(FunctionChunk& curFunc, NodeBlock& block, Context& ctx, Type* resType, bool mainBlock) {
+bool Compiler::compileBlock(FunctionChunk& curFunc, NodeBlock& block, Context& ctx, Type* resType, bool mainBlock) {
+	bool alwaysReturns = false;
 	for(const std::unique_ptr<Node>& stat : block.statements) {
-		compileStatement(curFunc, *stat, ctx, resType);
+		bool statReturns = compileStatement(curFunc, *stat, ctx, resType);
+		alwaysReturns = alwaysReturns || statReturns;
 	}
 	if(!mainBlock && ctx.getLocalCount() > 0) { // pop locals
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::POP);
 		writeUI16(curFunc.codeOut, ctx.getLocalCount());
 	}
-	if(mainBlock &&
-	   (block.statements.size() == 0 || block.statements.back()->type != NodeType::RETURN)) {
+	if(mainBlock && !alwaysReturns) {
 	   	// implicit return
 		if(!nilType->canBeAssignedTo(resType))
 			throw CompileError("Using implicit nil return in function with return type " + resType->getDesc());
 	}
+	return alwaysReturns;
 }
 
-void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx, Type* resType) {
+bool Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx, Type* resType) {
 	switch(stat.type) {
 	case NodeType::LET: {
 		NodeLet& stat2 = static_cast<NodeLet&>(stat);
@@ -154,7 +156,7 @@ void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx
 		uint32_t addPos = curFunc.code.size();
 		writeI16(curFunc.codeOut, 0);
 		Context thenCtx(false, &ctx);
-		compileBlock(curFunc, static_cast<NodeBlock&>(*stat2.thenBlock), thenCtx, resType);
+		bool thenReturns = compileBlock(curFunc, static_cast<NodeBlock&>(*stat2.thenBlock), thenCtx, resType);
 		uint32_t addPos2;
 		if(stat2.elseBlock) {
 			writeUI8(curFunc.codeOut, (uint8_t) Opcode::JUMP);
@@ -164,10 +166,12 @@ void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx
 		curFunc.fillInJump(addPos);
 		if(stat2.elseBlock) {
 			Context elseCtx(false, &ctx);
-			compileBlock(curFunc, static_cast<NodeBlock&>(*stat2.elseBlock), elseCtx, resType);
+			bool elseReturns = compileBlock(curFunc, static_cast<NodeBlock&>(*stat2.elseBlock), elseCtx, resType);
 			curFunc.fillInJump(addPos2);
+			return thenReturns && elseReturns;
+		} else {
+			return false;
 		}
-		break;
 	} case NodeType::WHILE: {
 		NodeWhile& stat2 = static_cast<NodeWhile&>(stat);
 		uint32_t before = curFunc.code.size();
@@ -192,10 +196,11 @@ void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx
 		if(!resType2->canBeAssignedTo(resType)) {
 			throw CompileError("Returning " + resType2->getDesc() + " in function with return type " + resType->getDesc());
 		}
-		break;
+		return true;
 	} default:
 		throw CompileError("Statement type not implemented: " + nodeTypeDesc(stat.type));
 	}
+	return false;
 }
 
 std::unordered_set<std::string> numericOps = {"+", "-", "*", "%"}; // int ⋅ int → int ; real ⋅ real → real

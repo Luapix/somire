@@ -54,8 +54,8 @@ private:
 	
 	Type* getType(Node& type);
 	std::vector<int16_t> compileFunction(NodeBlock& block, std::vector<std::string> argNames, std::vector<Type*> argTypes, Type* resType, Context* parent = nullptr);
-	void compileBlock(FunctionChunk& curFunc, NodeBlock& block, Context& ctx, Type* resType, bool mainBlock = false);
-	void compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx, Type* resType);
+	bool compileBlock(FunctionChunk& curFunc, NodeBlock& block, Context& ctx, Type* resType, bool mainBlock = false);
+	bool compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx, Type* resType);
 	Type* typeExpression(NodeExp& exp, Context& ctx);
 	void compileExpression(FunctionChunk& curFunc, NodeExp& expr, Context& ctx);
 	void compileConstant(FunctionChunk& curFunc, Value val);
