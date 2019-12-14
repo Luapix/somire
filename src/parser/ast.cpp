@@ -146,8 +146,10 @@ NodeReturn::NodeReturn(std::unique_ptr<NodeExp> expr) : Node(NodeType::RETURN), 
 
 std::string NodeReturn::getDataDesc(std::string prefix) { return " " + expr->toString(prefix); }
 
-NodeFunction::NodeFunction(std::vector<std::string> argNames, std::vector<std::unique_ptr<Node>> argTypes, std::unique_ptr<Node> block)
-	: NodeExp(NodeType::FUNC), argNames(argNames), argTypes(std::move(argTypes)), block(std::move(block)), protoIdx(-1) {}
+NodeFunction::NodeFunction(std::vector<std::string> argNames, std::vector<std::unique_ptr<Node>> argTypes,
+	std::unique_ptr<Node> resType, std::unique_ptr<Node> block)
+	: NodeExp(NodeType::FUNC), argNames(argNames), argTypes(std::move(argTypes)),
+	resType(std::move(resType)), block(std::move(block)), protoIdx(-1) {}
 
 std::string NodeFunction::getDataDesc(std::string prefix) {
 	std::string res = "(";

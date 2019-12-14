@@ -70,8 +70,7 @@ std::unique_ptr<Chunk> Compiler::compileProgram(std::unique_ptr<Node> ast) {
 	curChunk = std::unique_ptr<Chunk>(new Chunk());
 	if(ast->type != NodeType::BLOCK)
 		throw CompileError("Expected block to compile, got " + nodeTypeDesc(ast->type));
-	Type* resType = nullptr;
-	compileFunction(static_cast<NodeBlock&>(*ast), {}, {}, &resType);
+	compileFunction(static_cast<NodeBlock&>(*ast), {}, {}, anyType);
 	return std::move(curChunk);
 }
 
@@ -89,7 +88,7 @@ Type* Compiler::getType(Node& type) {
 	}
 }
 
-std::vector<int16_t> Compiler::compileFunction(NodeBlock& block, std::vector<std::string> argNames, std::vector<Type*> argTypes, Type** resType, Context* parent) {
+std::vector<int16_t> Compiler::compileFunction(NodeBlock& block, std::vector<std::string> argNames, std::vector<Type*> argTypes, Type* resType, Context* parent) {
 	curChunk->functions.emplace_back(new FunctionChunk());
 	Context ctx(true, parent);
 	for(uint32_t i = 0; i < argNames.size(); i++) {
@@ -99,7 +98,7 @@ std::vector<int16_t> Compiler::compileFunction(NodeBlock& block, std::vector<std
 	return ctx.getFunctionUpvalues();
 }
 
-void Compiler::compileBlock(FunctionChunk& curFunc, NodeBlock& block, Context& ctx, Type** resType, bool mainBlock) {
+void Compiler::compileBlock(FunctionChunk& curFunc, NodeBlock& block, Context& ctx, Type* resType, bool mainBlock) {
 	for(const std::unique_ptr<Node>& stat : block.statements) {
 		compileStatement(curFunc, *stat, ctx, resType);
 	}
@@ -110,22 +109,21 @@ void Compiler::compileBlock(FunctionChunk& curFunc, NodeBlock& block, Context& c
 	if(mainBlock &&
 	   (block.statements.size() == 0 || block.statements.back()->type != NodeType::RETURN)) {
 	   	// implicit return
-		*resType = nilType;
+		if(!nilType->canBeAssignedTo(resType))
+			throw CompileError("Using implicit nil return in function with return type " + resType->getDesc());
 	}
 }
 
-void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx, Type** resType) {
+void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx, Type* resType) {
 	switch(stat.type) {
 	case NodeType::LET: {
 		NodeLet& stat2 = static_cast<NodeLet&>(stat);
-		if(stat2.exp->type == NodeType::FUNC) // Define in advance to allow for recursion
-			ctx.defineLocal(stat2.id, macroType);
 		Type* valType = typeExpression(*stat2.exp, ctx);
+		if(stat2.exp->type == NodeType::FUNC) // Define in advance to allow for recursion
+			ctx.defineLocal(stat2.id, valType);
 		compileExpression(curFunc, *stat2.exp, ctx);
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::LET);
-		if(stat2.exp->type == NodeType::FUNC)
-			ctx.changeType(stat2.id, valType);
-		else
+		if(stat2.exp->type != NodeType::FUNC)
 			ctx.defineLocal(stat2.id, valType);
 		break;
 	} case NodeType::SET: {
@@ -191,14 +189,8 @@ void Compiler::compileStatement(FunctionChunk& curFunc, Node& stat, Context& ctx
 		Type* resType2 = typeExpression(expr, ctx);
 		compileExpression(curFunc, expr, ctx);
 		writeUI8(curFunc.codeOut, (uint8_t) Opcode::RETURN);
-		if(*resType) {
-			if((*resType)->canBeAssignedTo(resType2)) {
-				*resType = resType2;
-			} else if(!resType2->canBeAssignedTo(*resType)) {
-				throw CompileError("Returning " + (*resType)->getDesc() + " somewhere, and " + resType2->getDesc() + " somewhere else");
-			}
-		} else {
-			*resType = resType2;
+		if(!resType2->canBeAssignedTo(resType)) {
+			throw CompileError("Returning " + resType2->getDesc() + " in function with return type " + resType->getDesc());
 		}
 		break;
 	} default:
@@ -340,8 +332,7 @@ Type* Compiler::typeExpression(NodeExp& exp, Context& ctx) {
 		for(auto& argTypeDesc : exp2.argTypes) {
 			argTypes.push_back(getType(*argTypeDesc));
 		}
-		Type* resType = nullptr;
-		exp2.upvalues = compileFunction(static_cast<NodeBlock&>(*exp2.block), exp2.argNames, argTypes, &resType, &ctx);
+		Type* resType = getType(*exp2.resType);
 		exp.valueType.reset(new FunctionType(argTypes, resType));
 		break;
 	} case NodeType::LIST: {
@@ -448,10 +439,12 @@ void Compiler::compileExpression(FunctionChunk& curFunc, NodeExp& expr, Context&
 		if(expr2.argNames.size() > 0xffff)
 			throw CompileError("Too many arguments in function definition");
 		writeUI16(curFunc.codeOut, (uint16_t) expr2.argNames.size());
-		if(expr2.upvalues.size() > 0xffff)
+		auto type = dynamic_cast<FunctionType*>(expr2.valueType.get());
+		std::vector<int16_t> upvalues = compileFunction(static_cast<NodeBlock&>(*expr2.block), expr2.argNames, type->argTypes, type->resType, &ctx);
+		if(upvalues.size() > 0xffff)
 			throw CompileError("Too many upvalues in function definition");
-		writeUI16(curFunc.codeOut, (uint16_t) expr2.upvalues.size());
-		for(int16_t upvalue : expr2.upvalues) {
+		writeUI16(curFunc.codeOut, (uint16_t) upvalues.size());
+		for(int16_t upvalue : upvalues) {
 			writeI16(curFunc.codeOut, upvalue);
 		}
 		break;

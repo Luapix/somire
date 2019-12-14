@@ -89,6 +89,7 @@ std::unique_ptr<NodeExp> Parser<C>::parseFunction() {
 	discardSymbol("(");
 	std::vector<std::string> argNames;
 	std::vector<std::unique_ptr<Node>> argTypes;
+	std::unique_ptr<Node> resType;
 	if(!isCurSymbol(")")) {
 		while(true) {
 			if(curToken->type != NodeType::ID)
@@ -108,8 +109,14 @@ std::unique_ptr<NodeExp> Parser<C>::parseFunction() {
 		}
 	}
 	nextToken();
+	if(isCurSymbol("->")) {
+		nextToken();
+		resType = parseType();
+	} else {
+		resType.reset(new NodeSimpleType("nil"));
+	}
 	discardSymbol(":");
-	return std::unique_ptr<NodeExp>(new NodeFunction(argNames, std::move(argTypes), parseIndentedBlock()));
+	return std::unique_ptr<NodeExp>(new NodeFunction(argNames, std::move(argTypes), std::move(resType), parseIndentedBlock()));
 }
 
 template<typename C>

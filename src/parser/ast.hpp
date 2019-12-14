@@ -216,10 +216,12 @@ protected:
 
 class NodeFunction : public NodeExp {
 public:
-	NodeFunction(std::vector<std::string> argNames, std::vector<std::unique_ptr<Node>> argTypes, std::unique_ptr<Node> block);
+	NodeFunction(std::vector<std::string> argNames, std::vector<std::unique_ptr<Node>> argTypes,
+		std::unique_ptr<Node> resType, std::unique_ptr<Node> block);
 	
 	const std::vector<std::string> argNames;
 	const std::vector<std::unique_ptr<Node>> argTypes;
+	const std::unique_ptr<Node> resType;
 	const std::unique_ptr<Node> block;
 	
 	int32_t protoIdx;
