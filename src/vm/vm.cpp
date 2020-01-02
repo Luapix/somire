@@ -135,14 +135,7 @@ void VM::run(Chunk& chunk) {
 			}
 			break;
 		} case Opcode::GLOBAL: {
-			uint16_t constantIdx = readUI16(it);
-			Value nameValue = chunk.constants->vec.at(constantIdx);
-			String* nameStr = nameValue.get<String>();
-			if(!nameStr) throw ExecutionError("Tring to access global by name " + nameValue.toString());
-			std::string name = nameStr->str;
-			auto it = globals->map.find(name);
-			if(it == globals->map.end()) throw ExecutionError("Tring to access undefined global " + name);
-			stack->push(it->second);
+			stack->push(getGlobal(chunk, readUI16(it)));
 			break;
 		} case Opcode::JUMP_IF_NOT: {
 			Value cond = stack->pop();
@@ -234,6 +227,16 @@ void VM::run(Chunk& chunk) {
 				throw ExecutionError("List index out of range: " + std::to_string(index2));
 			stack->push(list->vec[index2-1]);
 			break;
+		} case Opcode::MAKE_METHOD: {
+			Value self = stack->pop();
+			Value nsValue = getGlobal(chunk, readUI16(it));
+			Namespace* ns = nsValue.get<Namespace>();
+			if(!ns) throw ExecutionError("Tring to get method from non-namespace " + nsValue.toString());
+			std::string prop = getStringOperand(chunk, readUI16(it));
+			auto it = ns->map.find(prop);
+			if(it == ns->map.end()) throw ExecutionError("Cannot find implementation for method '" + prop + "'");
+			stack->push(Value(new Method(self, it->second)));
+			break;
 		} default:
 			throw ExecutionError("Opcode " + opcodeDesc(op) + " not yet implemented");
 		}
@@ -288,4 +291,18 @@ void VM::popLocals(uint16_t amount) {
 	}
 	calls.back()->localCnt -= amount;
 	stack->removeN(amount);
+}
+
+std::string VM::getStringOperand(Chunk& chunk, uint16_t constantIdx) {
+	Value value = chunk.constants->vec.at(constantIdx);
+	String* object = value.get<String>();
+	if(!object) throw ExecutionError("Expected string constant as operand, got " + value.toString());
+	return object->str;
+}
+
+Value& VM::getGlobal(Chunk& chunk, uint16_t nameConstantIdx) {
+	std::string name = getStringOperand(chunk, nameConstantIdx);
+	auto it = globals->map.find(name);
+	if(it == globals->map.end()) throw ExecutionError("Tring to access undefined global " + name);
+	return it->second;
 }

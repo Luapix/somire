@@ -52,4 +52,7 @@ private:
 	Value& getLocal(uint16_t idx);
 	Upvalue& getUpvalue(int16_t idx);
 	void popLocals(uint16_t amount);
+	
+	std::string getStringOperand(Chunk& chunk, uint16_t constantIdx);
+	Value& getGlobal(Chunk& chunk, uint16_t nameConstantIdx);
 };

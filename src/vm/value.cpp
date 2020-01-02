@@ -277,3 +277,11 @@ void Function::markChildren() {
 		upvalue->mark();
 	}
 }
+
+
+Method::Method(Value self, Value function) : self(self), function(function) {}
+
+void Method::markChildren() {
+	self.mark();
+	function.mark();
+}

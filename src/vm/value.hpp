@@ -181,3 +181,15 @@ public:
 	
 	void markChildren() override;
 };
+
+class Method : public Object {
+public:
+	Value self;
+	Value function;
+	
+	Method(Value self, Value function);
+	
+	std::string getTypeDesc() override { return "method"; }
+	
+	void markChildren() override;
+};
