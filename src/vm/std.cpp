@@ -47,10 +47,6 @@ Value writeLine(std::vector<Value>& args) {
 	return Value::nil();
 }
 
-Value listNew(std::vector<Value>& args) {
-	return Value(new List());
-}
-
 Value listAdd(std::vector<Value>& args) {
 	if(args.size() <= 1 || args.size() >= 4)
 		throw ExecutionError("Expected 2 or 3 arguments, got " + std::to_string(args.size()));
@@ -85,10 +81,12 @@ void loadStd(Namespace& ns) {
 	ns.map["repr"] = Value(new CFunction(repr));
 	ns.map["write"] = Value(new CFunction(write));
 	ns.map["writeLine"] = Value(new CFunction(writeLine));
-	ns.map["listNew"] = Value(new CFunction(listNew));
-	ns.map["listAdd"] = Value(new CFunction(listAdd));
-	ns.map["listSize"] = Value(new CFunction(listSize));
 	ns.map["bool"] = Value(new CFunction(toBool));
+	
+	Namespace* listNs = new Namespace();
+	ns.map["list"] = listNs;
+	listNs->map["add"] = Value(new CFunction(listAdd));
+	listNs->map["size"] = Value(new CFunction(listSize));
 }
 
 void defineStdTypes(TypeNamespace& ns, TypeNamespace& types) {
@@ -96,8 +94,5 @@ void defineStdTypes(TypeNamespace& ns, TypeNamespace& types) {
 	ns.map["repr"] = new FunctionType({types.map["any"]}, types.map["string"]);
 	ns.map["write"] = new FunctionType({types.map["string"]}, types.map["nil"]);
 	ns.map["writeLine"] = new FunctionType({types.map["string"]}, types.map["nil"]);
-	ns.map["listNew"] = new FunctionType({}, new ListType(nullptr));
-	ns.map["listAdd"] = types.map["macro"];
-	ns.map["listSize"] = new FunctionType({new ListType(types.map["any"])}, types.map["int"]);
 	ns.map["bool"] = new FunctionType({types.map["any"]}, types.map["bool"]);
 }

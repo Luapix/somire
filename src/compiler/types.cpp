@@ -2,17 +2,12 @@
 
 Type::Type(std::string name, bool isAny) : name(name), _isAny(isAny) {}
 
-void Type::defineMethod(std::string methodName, Type* methodType) {
-	methods[methodName] = methodType;
+Type* Type::getMethodType(TypeNamespace& types, std::string methodName) {
+	return nullptr;
 }
 
-Type* Type::getMethod(std::string methodName) {
-	auto it = methods.find(methodName);
-	if(it != methods.end()) {
-		return it->second;
-	} else {
-		return nullptr;
-	}
+std::string Type::getNamespace() {
+	return name;
 }
 
 bool Type::canBeAssignedTo(Type* other) {
@@ -20,12 +15,6 @@ bool Type::canBeAssignedTo(Type* other) {
 }
 
 std::string Type::getDesc() { return name; }
-
-void Type::markChildren() {
-	for(auto& pair : methods) {
-		pair.second->mark();
-	}
-}
 
 
 UnknownType::UnknownType() : Type("unknown") {}
@@ -81,6 +70,15 @@ void FunctionType::markChildren() {
 
 
 ListType::ListType(Type* elemType) : Type("list"), elemType(elemType) {}
+
+Type* ListType::getMethodType(TypeNamespace& types, std::string methodName) {
+	if(methodName == "add") {
+		return types.map["macro"];
+	} else if(methodName == "size") {
+		return new FunctionType({}, types.map["int"]);
+	}
+	return nullptr;
+}
 
 bool ListType::canBeAssignedTo(Type* other) {
 	if(other->isAny()) return true;

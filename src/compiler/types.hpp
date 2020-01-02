@@ -17,8 +17,8 @@ public:
 	
 	bool isAny() { return _isAny; }
 	
-	void defineMethod(std::string methodName, Type* methodType);
-	Type* getMethod(std::string methodName);
+	virtual Type* getMethodType(TypeNamespace& types, std::string methodName);
+	virtual std::string getNamespace();
 	
 	virtual bool canBeAssignedTo(Type* other);
 	virtual std::string getDesc();
@@ -26,12 +26,9 @@ public:
 	std::string getTypeDesc() override { return "type"; }
 	std::string toString() override { return "<type " + getDesc() + ">"; }
 	
-	void markChildren() override;
-	
 private:
 	std::string name;
 	bool _isAny;
-	std::unordered_map<std::string, Type*> methods;
 };
 
 class UnknownType : public Type {
@@ -71,6 +68,8 @@ public:
 	Type* elemType; // nullptr represents empty list
 	
 	ListType(Type* elemType);
+	
+	Type* getMethodType(TypeNamespace& types, std::string methodName) override;
 	
 	bool canBeAssignedTo(Type* other) override;
 	std::string getDesc() override;

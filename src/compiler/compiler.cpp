@@ -357,6 +357,15 @@ Type* Compiler::typeExpression(NodeExp& exp, Context& ctx) {
 		}
 		exp.valueType.reset(new ListType(elemType));
 		break;
+	} case NodeType::PROP: {
+		NodeProp& exp2 = static_cast<NodeProp&>(exp);
+		Type* valType = typeExpression(*exp2.val, ctx);
+		Type* propType = valType->getMethodType(*types, exp2.prop);
+		if(!propType) {
+			throw CompileError("Type " + valType->getDesc() + " does not have a method named " + exp2.prop);
+		}
+		exp.valueType.reset(propType);
+		break;
 	} default:
 		throw CompileError("Expression type not implemented: " + nodeTypeDesc(exp.type));
 	}
@@ -462,6 +471,16 @@ void Compiler::compileExpression(FunctionChunk& curFunc, NodeExp& expr, Context&
 		if(expr2.val.size() > 0xffff)
 			throw CompileError("Too many elements in list literal");
 		writeUI16(curFunc.codeOut, (uint16_t) expr2.val.size());
+		break;
+	} case NodeType::PROP: {
+		NodeProp& exp2 = static_cast<NodeProp&>(expr);
+		std::string ns = exp2.val->valueType->getNamespace();
+		compileExpression(curFunc, *exp2.val, ctx);
+		writeUI8(curFunc.codeOut, (uint8_t) Opcode::MAKE_METHOD);
+		writeUI16(curFunc.codeOut, curChunk->constants->vec.size());
+		curChunk->constants->vec.emplace_back(new String(ns));
+		writeUI16(curFunc.codeOut, curChunk->constants->vec.size());
+		curChunk->constants->vec.emplace_back(new String(exp2.prop));
 		break;
 	} default:
 		throw CompileError("Expression type not implemented: " + nodeTypeDesc(expr.type));

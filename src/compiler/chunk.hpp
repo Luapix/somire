@@ -34,7 +34,7 @@ enum class Opcode : uint8_t {
 	JUMP_IF_NOT,
 	JUMP,
 	CALL, RETURN,
-	MAKE_FUNC, MAKE_LIST,
+	MAKE_FUNC, MAKE_LIST, MAKE_METHOD,
 	INDEX
 };
 

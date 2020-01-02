@@ -35,6 +35,7 @@ std::unordered_map<Opcode, std::string> opcodeDescTable = {
 	{Opcode::RETURN, "RETURN"},
 	{Opcode::MAKE_FUNC, "MAKE_FUNC"},
 	{Opcode::MAKE_LIST, "MAKE_LIST"},
+	{Opcode::MAKE_METHOD, "MAKE_METHOD"},
 	{Opcode::INDEX, "INDEX"},
 };
 
@@ -153,6 +154,9 @@ std::string Chunk::list() {
 			case Opcode::CALL:
 			case Opcode::MAKE_LIST:
 				res << " " << (int) readUI16(it);
+				break;
+			case Opcode::MAKE_METHOD:
+				res << " " << (int) readUI16(it) << " " << (int) readUI16(it);
 				break;
 			case Opcode::JUMP_IF_NOT:
 			case Opcode::JUMP:
