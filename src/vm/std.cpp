@@ -48,8 +48,9 @@ Value writeLine(std::vector<Value>& args) {
 }
 
 Value listAdd(std::vector<Value>& args) {
-	if(args.size() <= 1 || args.size() >= 4)
-		throw ExecutionError("Expected 2 or 3 arguments, got " + std::to_string(args.size()));
+	if(args.size() == 0) throw ExecutionError("Did not get self argument");
+	if(args.size() == 1 || args.size() >= 4)
+		throw ExecutionError("Expected 1 or 2 arguments in add, got " + std::to_string(args.size()-1));
 	List& list = expectObject<List>(args[0], 0, "list");
 	if(args.size() == 2) {
 		list.vec.push_back(args[1]);

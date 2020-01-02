@@ -185,9 +185,9 @@ public:
 class Method : public Object {
 public:
 	Value self;
-	Value function;
+	CFunction* function;
 	
-	Method(Value self, Value function);
+	Method(Value self, CFunction* function);
 	
 	std::string getTypeDesc() override { return "method"; }
 	

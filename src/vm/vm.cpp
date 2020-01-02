@@ -6,11 +6,10 @@
 
 Stack::Stack() : base(&array[0]), top((Value*) base) {}
 
-std::vector<Value> Stack::popN(uint32_t n) {
+void Stack::popN(std::vector<Value>& out, uint32_t n) {
 	if(size() < n) throw ExecutionError("Stack is too small to pop " + std::to_string(n) + " values");
-	std::vector<Value> res(top - n, top);
+	out.insert(out.end(), top - n, top);
 	top -= n;
-	return res;
 }
 
 void Stack::removeN(uint32_t n) {
@@ -152,11 +151,17 @@ void VM::run(Chunk& chunk) {
 			
 			Value funcValue = stack->pop();
 			
+			Method* method;
 			CFunction* cfunc;
 			Function* func;
-			if(cfunc = funcValue.get<CFunction>()) {
+			if((method = funcValue.get<Method>()) || (cfunc = funcValue.get<CFunction>())) {
+				std::vector<Value> args;
+				if(method) {
+					args.push_back(method->self);
+					cfunc = method->function;
+				}
 				// Pop the arguments off the stack
-				std::vector<Value> args = stack->popN(argCnt);
+				stack->popN(args, argCnt);
 				Value res = cfunc->func(args);
 				stack->push(res);
 			} else if(func = funcValue.get<Function>()) {
@@ -211,7 +216,8 @@ void VM::run(Chunk& chunk) {
 			break;
 		} case Opcode::MAKE_LIST: {
 			uint16_t valueCnt = readUI16(it);
-			std::vector<Value> vals = stack->popN(valueCnt);
+			std::vector<Value> vals;
+			stack->popN(vals, valueCnt);
 			stack->push(Value(new List(std::move(vals))));
 			break;
 		} case Opcode::INDEX: {
@@ -235,7 +241,9 @@ void VM::run(Chunk& chunk) {
 			std::string prop = getStringOperand(chunk, readUI16(it));
 			auto it = ns->map.find(prop);
 			if(it == ns->map.end()) throw ExecutionError("Cannot find implementation for method '" + prop + "'");
-			stack->push(Value(new Method(self, it->second)));
+			CFunction* impl = it->second.get<CFunction>();
+			if(!impl) throw ExecutionError("Method implementation is not a CFunction");
+			stack->push(Value(new Method(self, impl)));
 			break;
 		} default:
 			throw ExecutionError("Opcode " + opcodeDesc(op) + " not yet implemented");

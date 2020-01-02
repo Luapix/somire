@@ -279,9 +279,9 @@ void Function::markChildren() {
 }
 
 
-Method::Method(Value self, Value function) : self(self), function(function) {}
+Method::Method(Value self, CFunction* function) : self(self), function(function) {}
 
 void Method::markChildren() {
 	self.mark();
-	function.mark();
+	function->mark();
 }

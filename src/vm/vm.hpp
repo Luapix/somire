@@ -30,7 +30,7 @@ public:
 	}
 	inline uint32_t size() { return top - base; }
 	
-	std::vector<Value> popN(uint32_t n);
+	void popN(std::vector<Value>& out, uint32_t n);
 	void removeN(uint32_t n);
 	
 	void markChildren() override;
