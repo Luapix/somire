@@ -1,7 +1,7 @@
 
 CC     := g++
 CFLAGS := -MD -MP -std=c++17 -Ic:/lib/utf8-cpp-2.3.4 -Isrc
-LDFLAGS := 
+LDFLAGS := -static
 
 SRC_FILES := $(wildcard src/*/*.cpp) src/main.cpp src/util/uni_data.cpp
 OBJ_FILES := $(patsubst src/%.cpp,build/%.o,$(SRC_FILES))
